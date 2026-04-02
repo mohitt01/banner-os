@@ -1,0 +1,15 @@
+{
+  "name": "banneros-mcp-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server for BannerOS integration guidance",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.5.0",
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}
