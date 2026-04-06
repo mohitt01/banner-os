@@ -1,7 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '..', 'banneros.db');
+const DB_PATH = process.env.BANNEROS_DB_PATH || path.join(__dirname, '..', 'banneros.db');
 
 let db;
 

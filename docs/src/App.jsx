@@ -20,7 +20,7 @@ function getIcon(name) {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL || ''}>
       <div className="min-h-screen bg-white flex">
         {/* Sidebar */}
         <aside className="w-64 border-r border-gray-200 flex flex-col fixed h-full bg-gray-50">
@@ -54,7 +54,7 @@ function App() {
             })}
           </nav>
           <div className="p-4 border-t border-gray-200">
-            <a href="http://localhost:3000" className="text-xs text-indigo-600 hover:text-indigo-800">Open Dashboard &rarr;</a>
+            <a href="/" className="text-xs text-indigo-600 hover:text-indigo-800">Open Dashboard &rarr;</a>
           </div>
         </aside>
 

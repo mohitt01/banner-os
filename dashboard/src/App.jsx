@@ -67,7 +67,7 @@ function App() {
           {/* Docs link */}
           <div className="px-3 pb-2">
             <a
-              href="http://localhost:3003"
+              href="/docs"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all duration-200"

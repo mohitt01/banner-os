@@ -40,7 +40,37 @@ function safeApiCall(fn) {
 // HTTP mode creates a single shared server; stdio mode uses one too.
 // ═════════════════════════════════════════════════════════════════════════════
 
-function createServer() {
+/**
+ * Mount MCP server routes on an existing Express app.
+ * Used by the unified server.js to avoid duplicating MCP SDK imports.
+ */
+export function mountMcp(app) {
+  app.post("/mcp", async (req, res) => {
+    try {
+      const server = createServer();
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      });
+      res.on("close", () => {
+        transport.close();
+        server.close();
+      });
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (err) {
+      console.error("MCP request error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: err.message }, id: null });
+      }
+    }
+  });
+
+  app.get("/mcp/health", (req, res) => {
+    res.json({ status: "ok", service: "BannerOS MCP Server", version: "2.0.0" });
+  });
+}
+
+export function createServer() {
   const server = new McpServer({
     name: "banneros",
     version: "2.0.0",
@@ -489,34 +519,6 @@ server.tool(
   }
 );
 
-server.tool(
-  "seed_demo_banners",
-  "Returns the seed command and explains what demo banners will be created. Does NOT execute the seed — the agent should run the command",
-  {},
-  async () => {
-    return {
-      content: [{
-        type: "text",
-        text: JSON.stringify({
-          command: "cd api && node src/seed.js",
-          description: "Seeds the BannerOS database with 6 demo banners across 3 types (promotional, support, informational) with varied targeting rules",
-          banners_created: [
-            { title: "Summer Sale — 30% off Pro Plans", type: "promotional", targeting: "free users, web, US/GB/CA" },
-            { title: "Scheduled Maintenance — April 5th", type: "support", targeting: "all users" },
-            { title: "API Rate Limits Changing", type: "support", targeting: "free users, web" },
-            { title: "Welcome to the Platform!", type: "informational", targeting: "new users, /dashboard" },
-            { title: "Tip: Keyboard Shortcuts", type: "informational", targeting: "authenticated, web/desktop" },
-            { title: "Holiday Special — Free Trial Extended", type: "promotional", targeting: "free users (inactive)" },
-          ],
-          prerequisites: [
-            "API server must have been started at least once (to create the DB)",
-            "Run from the banner-ops root: npm run seed",
-          ],
-        }, null, 2),
-      }],
-    };
-  }
-);
 
 server.tool(
   "testing_scenarios",
@@ -571,12 +573,12 @@ server.tool(
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// Start — stdio or streamable HTTP depending on MCP_PORT env var
+// Start — only when run directly (not when imported by unified server.js)
 // ═════════════════════════════════════════════════════════════════════════════
 
-const MCP_PORT = process.env.MCP_PORT;
+const isMainModule = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 
-if (MCP_PORT) {
+if (isMainModule && process.env.MCP_PORT) {
   // Streamable HTTP mode — used by Windsurf serverUrl, Docker, network deployments.
   // POST /mcp → JSON-RPC over streamable HTTP (stateless — fresh server+transport per request)
   // GET /health → simple health check
@@ -610,7 +612,7 @@ if (MCP_PORT) {
   app.listen(parseInt(MCP_PORT, 10), "0.0.0.0", () => {
     console.log(`BannerOS MCP Server (HTTP) running on http://0.0.0.0:${MCP_PORT}/mcp`);
   });
-} else {
+} else if (isMainModule) {
   // Stdio mode — used by IDEs (Windsurf, Cursor, Claude Code)
   const server = createServer();
   const transport = new StdioServerTransport();

@@ -16,7 +16,6 @@
  *   node banneros-client.js create-banner '{"title":"Sale!","type":"promotional","priority":100}'
  *   node banneros-client.js get-tenant
  *   node banneros-client.js update-tenant '{"config":{"maxBannersPerPage":5}}'
- *   node banneros-client.js seed
  *
  * Environment:
  *   BANNEROS_API_URL  — API base URL (default: http://localhost:3001)
@@ -152,35 +151,6 @@ const commands = {
     return put(`/api/tenants/${TENANT}`, opts);
   },
 
-  // --- Seed ---
-
-  async seed() {
-    // Execute the seed script via child_process
-    const { execSync } = await import('child_process');
-    const { resolve, dirname } = await import('path');
-    const { fileURLToPath } = await import('url');
-    const __dirname = dirname(fileURLToPath(import.meta.url));
-
-    // Try to find the seed script relative to skill location or via env
-    const seedPaths = [
-      resolve(__dirname, '../../../api/src/seed.js'),       // inside banner-ops repo
-      resolve(__dirname, '../../../../api/src/seed.js'),     // installed as .skills/banneros-integration/scripts/
-    ];
-
-    for (const seedPath of seedPaths) {
-      try {
-        const { statSync } = await import('fs');
-        statSync(seedPath);
-        const output = execSync(`node "${seedPath}"`, { encoding: 'utf-8', timeout: 10000 });
-        return { success: true, output: output.trim() };
-      } catch { /* try next */ }
-    }
-
-    return {
-      success: false,
-      message: 'Could not find seed.js. Run manually: cd api && node src/seed.js',
-    };
-  },
 };
 
 // ─── CLI runner ──────────────────────────────────────────────────────────────
@@ -208,7 +178,6 @@ Commands:
   tenant-stats                        Get aggregate stats for all banners
   get-tenant                          Get tenant configuration
   update-tenant '{"config":{...}}'    Update tenant configuration
-  seed                                Seed demo banners
 
 Environment:
   BANNEROS_API_URL   API base (default: http://localhost:3001)

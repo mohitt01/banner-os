@@ -150,7 +150,6 @@ node scripts/banneros-client.js banner-stats '{"banner_id":"uuid"}'  # detailed 
 # Configuration & setup
 node scripts/banneros-client.js get-tenant                # view tenant config
 node scripts/banneros-client.js update-tenant '{"config":{"maxBannersPerPage":5}}'
-node scripts/banneros-client.js seed                      # populate demo data
 ```
 
 Set `BANNEROS_API_URL` and `BANNEROS_TENANT` environment variables if not using defaults.
@@ -162,7 +161,6 @@ See [references/client-script.md](references/client-script.md) for the full comm
 - **Before writing integration code** — run `health` and `list-banners` to verify the platform is up and has content
 - **After writing integration code** — run `evaluate` with test contexts to verify targeting, run `tenant-stats` or `banner-stats` to confirm impressions are tracked
 - **To validate configurations** — run `validate` to check for missing fields, bad dates, targeting issues, and policy violations
-- **To set up a dev environment** — run `seed` to populate demo banners
 - **To configure the tenant** — run `update-tenant` to adjust settings like max banners per page
 - **To manage banners** — run `create-banner`, `update-banner`, `delete-banner` to manage banner content directly
 

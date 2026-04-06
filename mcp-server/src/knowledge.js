@@ -75,7 +75,7 @@ export function buildDocsTree() {
   return {
     title: "BannerOS Documentation",
     source: "docs/pages/ directory (markdown)",
-    docs_site: "http://localhost:3003",
+    docs_site: (process.env.BASE_URL || "http://localhost:3001") + "/docs",
     sections: files,
   };
 }

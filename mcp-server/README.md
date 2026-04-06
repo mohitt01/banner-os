@@ -113,7 +113,6 @@ These tools serve documentation and structured knowledge — no API connection r
 | `recommend_banner_integration` | Full integration recommendation: fetch, cache, fallback, layout, telemetry |
 | `list_banner_types` | All banner types with descriptions, styling, and use cases |
 | `get_fallback_policy` | What to show when no banners match or API is down |
-| `seed_demo_banners` | Returns seed command and explains what demo data will be created |
 | `testing_scenarios` | Test scenarios for verifying integration correctness |
 | `get_skill` | Full merged BannerOS integration skill (SKILL.md + all references) |
 

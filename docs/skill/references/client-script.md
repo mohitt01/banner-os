@@ -102,13 +102,6 @@ node scripts/banneros-client.js get-tenant
 node scripts/banneros-client.js update-tenant '{"config":{"maxBannersPerPage":5,"allowPromotional":true,"allowSupport":true,"allowInformational":true}}'
 ```
 
-### Seed demo data
-
-```bash
-# Seed 6 demo banners with varied targeting
-node scripts/banneros-client.js seed
-```
-
 ## Agent usage
 
 When an agent has this skill installed, it can run the client script directly to:
@@ -117,9 +110,8 @@ When an agent has this skill installed, it can run the client script directly to
 2. **List existing banners** to understand what content is configured
 3. **Create test banners** for development and verification
 4. **Evaluate banners** with specific user contexts to test targeting rules
-5. **Seed demo data** to populate a fresh environment
-6. **View stats** to verify impression tracking is working
-7. **Configure the tenant** to adjust platform settings
+5. **View stats** to verify impression tracking is working
+6. **Configure the tenant** to adjust platform settings
 
 The agent does NOT need MCP support to use these capabilities — it just runs the script with `node`.
 
