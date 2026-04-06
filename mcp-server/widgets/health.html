@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BannerOS — Health</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px; line-height: 1.5; color: #1a1a2e;
+      background: #ffffff; padding: 14px;
+    }
+    h1 { font-size: 15px; font-weight: 600; margin-bottom: 10px; color: #1a1a2e; }
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 8px; margin-bottom: 12px;
+    }
+    .stat-box {
+      text-align: center; padding: 10px 8px; border-radius: 8px;
+      background: #f9fafb; border: 1px solid #e5e7eb;
+    }
+    .stat-box .value { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+    .stat-box .label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+    .check-ok { color: #10b981; font-weight: 600; }
+    .check-fail { color: #ef4444; font-weight: 600; }
+    .text-muted { color: #6b7280; }
+  </style>
+</head>
+<body>
+  <div id="root"><p class="text-muted">Loading…</p></div>
+  <script type="module">
+/*__EXT_APPS_BUNDLE__*/
+const { App } = globalThis.ExtApps;
+(async () => {
+  const app = new App({ name: "BannerOS", version: "2.0.0" }, {});
+  const root = document.getElementById("root");
+
+  app.ontoolresult = ({ content }) => {
+    try {
+      const data = JSON.parse(content[0].text);
+      render(data);
+    } catch (e) {
+      root.innerHTML = '<p style="color:#ef4444">Failed to parse tool result</p>';
+    }
+  };
+
+  await app.connect();
+
+  function render(data) {
+    const ok = data.status === 'ok';
+    let html = '<h1>API Health</h1>';
+    html += '<div class="stat-grid">'
+      + '<div class="stat-box"><div class="value ' + (ok ? 'check-ok' : 'check-fail') + '">' + (ok ? 'OK' : 'DOWN') + '</div><div class="label">Status: ' + (data.status || 'unknown') + '</div></div>'
+      + '<div class="stat-box"><div class="value">' + esc(data.version || '-') + '</div><div class="label">Version</div></div>'
+      + '</div>';
+    root.innerHTML = html;
+  }
+
+  function esc(s) { if (s == null) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+})();
+  </script>
+</body>
+</html>

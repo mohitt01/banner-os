@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BannerOS — Stats</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px; line-height: 1.5; color: #1a1a2e;
+      background: #ffffff; padding: 14px;
+    }
+    h1 { font-size: 15px; font-weight: 600; margin-bottom: 10px; color: #1a1a2e; }
+    h2 { font-size: 13px; font-weight: 600; margin: 14px 0 6px; color: #374151; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 9999px;
+      font-size: 11px; font-weight: 500; line-height: 1.4;
+    }
+    .badge-promotional { background: #dbeafe; color: #1d4ed8; }
+    .badge-support { background: #fef3c7; color: #92400e; }
+    .badge-informational { background: #d1fae5; color: #065f46; }
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 8px; margin-bottom: 12px;
+    }
+    .stat-box {
+      text-align: center; padding: 10px 8px; border-radius: 8px;
+      background: #f9fafb; border: 1px solid #e5e7eb;
+    }
+    .stat-box .value { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+    .stat-box .label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th {
+      text-align: left; padding: 6px 8px; background: #f3f4f6;
+      color: #374151; font-weight: 600; border-bottom: 1px solid #e5e7eb;
+    }
+    td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; }
+    tr:hover td { background: #f9fafb; }
+    .mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; }
+    .text-muted { color: #6b7280; }
+    .text-sm { font-size: 11px; }
+    .empty { text-align: center; padding: 24px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div id="root"><p class="text-muted">Loading…</p></div>
+  <script type="module">
+/*__EXT_APPS_BUNDLE__*/
+const { App } = globalThis.ExtApps;
+(async () => {
+  const app = new App({ name: "BannerOS", version: "2.0.0" }, {});
+  const root = document.getElementById("root");
+
+  app.ontoolresult = ({ content }) => {
+    try {
+      const data = JSON.parse(content[0].text);
+      render(data);
+    } catch (e) {
+      root.innerHTML = '<p style="color:#ef4444">Failed to parse tool result</p>';
+    }
+  };
+
+  await app.connect();
+
+  function render(data) {
+    if (data.stats && Array.isArray(data.stats)) {
+      renderTenantStats(data);
+    } else if (data.stats) {
+      renderBannerStats(data);
+    } else {
+      root.innerHTML = '<div class="empty">No stats data</div>';
+    }
+  }
+
+  function renderTenantStats(data) {
+    const stats = data.stats;
+    const totals = stats.reduce((acc, s) => {
+      acc.views += s.views; acc.clicks += s.clicks; acc.dismissals += s.dismissals;
+      return acc;
+    }, { views: 0, clicks: 0, dismissals: 0 });
+    const ctr = totals.views > 0 ? (totals.clicks / totals.views * 100).toFixed(1) : '0.0';
+
+    let html = '<h1>Tenant Stats: ' + esc(data.tenant_id) + '</h1>';
+    html += '<div class="stat-grid">'
+      + statBox(stats.length, 'Banners')
+      + statBox(totals.views.toLocaleString(), 'Views')
+      + statBox(totals.clicks.toLocaleString(), 'Clicks')
+      + statBox(ctr + '%', 'CTR')
+      + '</div>';
+    html += '<table><thead><tr><th>Banner</th><th>Type</th><th>Views</th><th>Clicks</th><th>Dismiss</th><th>CTR</th></tr></thead><tbody>';
+    for (const s of stats) {
+      html += '<tr>'
+        + '<td><strong>' + esc(s.title) + '</strong></td>'
+        + '<td><span class="badge badge-' + esc(s.type) + '">' + esc(s.type) + '</span></td>'
+        + '<td>' + s.views + '</td>'
+        + '<td>' + s.clicks + '</td>'
+        + '<td>' + s.dismissals + '</td>'
+        + '<td>' + esc(s.ctr) + '</td>'
+        + '</tr>';
+    }
+    html += '</tbody></table>';
+    root.innerHTML = html;
+  }
+
+  function renderBannerStats(data) {
+    const s = data.stats;
+    let html = '<h1>Banner Stats</h1>';
+    html += '<p class="text-sm text-muted mono" style="margin-bottom:8px">' + esc(data.banner_id) + '</p>';
+    html += '<div class="stat-grid">'
+      + statBox(s.views.toLocaleString(), 'Views')
+      + statBox(s.clicks.toLocaleString(), 'Clicks')
+      + statBox(s.dismissals.toLocaleString(), 'Dismissals')
+      + statBox(s.unique_users.toLocaleString(), 'Unique Users')
+      + statBox(s.ctr, 'CTR')
+      + '</div>';
+    if (data.daily?.length) {
+      html += '<h2>Daily Breakdown (last 30 days)</h2><table><thead><tr><th>Date</th><th>Action</th><th>Count</th></tr></thead><tbody>';
+      for (const d of data.daily) {
+        html += '<tr><td>' + esc(d.date) + '</td><td>' + esc(d.action) + '</td><td>' + d.count + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    }
+    root.innerHTML = html;
+  }
+
+  function statBox(val, label) {
+    return '<div class="stat-box"><div class="value">' + val + '</div><div class="label">' + label + '</div></div>';
+  }
+
+  function esc(s) { if (s == null) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+})();
+  </script>
+</body>
+</html>

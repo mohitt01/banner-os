@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BannerOS — Validate</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px; line-height: 1.5; color: #1a1a2e;
+      background: #ffffff; padding: 14px;
+    }
+    h1 { font-size: 15px; font-weight: 600; margin-bottom: 10px; color: #1a1a2e; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 9999px;
+      font-size: 11px; font-weight: 500; line-height: 1.4;
+    }
+    .badge-error { background: #fee2e2; color: #dc2626; }
+    .badge-warning { background: #fef3c7; color: #d97706; }
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 8px; margin-bottom: 12px;
+    }
+    .stat-box {
+      text-align: center; padding: 10px 8px; border-radius: 8px;
+      background: #f9fafb; border: 1px solid #e5e7eb;
+    }
+    .stat-box .value { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+    .stat-box .label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+    .check-ok { color: #10b981; font-weight: 600; }
+    .check-fail { color: #ef4444; font-weight: 600; }
+    .issue-list { list-style: none; }
+    .issue-item {
+      padding: 8px 10px; border-left: 3px solid; margin-bottom: 4px;
+      background: #fafafa; border-radius: 0 6px 6px 0; font-size: 12px;
+    }
+    .issue-item.error { border-color: #ef4444; }
+    .issue-item.warning { border-color: #f59e0b; }
+    .text-sm { font-size: 11px; }
+    .text-muted { color: #6b7280; }
+  </style>
+</head>
+<body>
+  <div id="root"><p class="text-muted">Loading…</p></div>
+  <script type="module">
+/*__EXT_APPS_BUNDLE__*/
+const { App } = globalThis.ExtApps;
+(async () => {
+  const app = new App({ name: "BannerOS", version: "2.0.0" }, {});
+  const root = document.getElementById("root");
+
+  app.ontoolresult = ({ content }) => {
+    try {
+      const data = JSON.parse(content[0].text);
+      render(data);
+    } catch (e) {
+      root.innerHTML = '<p style="color:#ef4444">Failed to parse tool result</p>';
+    }
+  };
+
+  await app.connect();
+
+  function render(data) {
+    let html = '<h1>Validation Report</h1>';
+    html += '<div class="stat-grid">'
+      + '<div class="stat-box"><div class="value">' + (data.total_banners || 0) + '</div><div class="label">Total Banners</div></div>'
+      + '<div class="stat-box"><div class="value ' + (data.errors ? 'check-fail' : 'check-ok') + '">' + (data.errors || 0) + '</div><div class="label">Errors</div></div>'
+      + '<div class="stat-box"><div class="value" style="color:#d97706">' + (data.warnings || 0) + '</div><div class="label">Warnings</div></div>'
+      + '</div>';
+    if (!data.issues?.length) {
+      html += '<p class="check-ok" style="text-align:center;padding:16px">All banners look good!</p>';
+    } else {
+      html += '<ul class="issue-list">';
+      for (const i of data.issues) {
+        html += '<li class="issue-item ' + esc(i.severity) + '">'
+          + '<strong>' + esc(i.banner_title || i.banner_id) + '</strong>'
+          + ' <span class="badge badge-' + esc(i.severity) + '">' + esc(i.severity) + '</span>'
+          + '<br><span class="text-sm">' + esc(i.message) + '</span>'
+          + '</li>';
+      }
+      html += '</ul>';
+    }
+    root.innerHTML = html;
+  }
+
+  function esc(s) { if (s == null) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+})();
+  </script>
+</body>
+</html>

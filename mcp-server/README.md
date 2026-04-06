@@ -1,6 +1,6 @@
 # BannerOS MCP Server
 
-An MCP (Model Context Protocol) server for BannerOS — combines **live API operations** with **integration guidance** and **rich UI rendering** via [MCP Apps](https://apps.extensions.modelcontextprotocol.io/api/).
+An MCP (Model Context Protocol) server for BannerOS — combines **live API operations** with **integration guidance** and **rich UI widgets** via [MCP Apps](https://apps.extensions.modelcontextprotocol.io/api/).
 
 Developers can manage banners, evaluate targeting, view stats, and validate configurations directly from their IDE's AI chat — with interactive visual dashboards rendered inline.
 
@@ -8,11 +8,13 @@ Developers can manage banners, evaluate targeting, view stats, and validate conf
 
 - **API operation tools** — make live HTTP calls to the BannerOS API (`BANNEROS_API_URL`, default `http://localhost:3001`)
 - **Guidance tools** — serve documentation, placement schemas, integration patterns from `docs/pages/` markdown files
-- **MCP App UI views** — tools marked with 🖼 render interactive HTML views inline in MCP Apps-capable clients (Windsurf, Claude, etc.)
+- **MCP App UI widgets** — tools marked with 🖼 render interactive HTML views inline in MCP Apps-capable clients (Windsurf, Claude, etc.)
+- **Dual transport** — stdio (default, for IDEs) or streamable HTTP (`MCP_PORT` env var, for Docker/network)
+- **ext-apps bundle inlining** — widget HTML files in `widgets/` have the `@modelcontextprotocol/ext-apps` browser bundle inlined at startup (iframe CSP blocks CDN imports)
 
 ## Setup
 
-### Windsurf / Cascade
+### Windsurf / Cascade (stdio)
 
 Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`):
 
@@ -30,7 +32,31 @@ Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`):
 }
 ```
 
+### Windsurf / Cascade (HTTP — serverUrl)
+
+Start the server in HTTP mode, then configure Windsurf to connect:
+
+```bash
+cd mcp-server && MCP_PORT=3002 node src/index.js
+```
+
+```json
+{
+  "mcpServers": {
+    "banneros": {
+      "serverUrl": "http://localhost:3002/mcp"
+    }
+  }
+}
+```
+
 ### Claude Code
+
+```bash
+claude mcp add --transport http banneros http://localhost:3002/mcp
+```
+
+Or stdio mode:
 
 ```bash
 claude mcp add banneros node /absolute/path/to/banner-ops/mcp-server/src/index.js
@@ -120,7 +146,7 @@ Views include:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BANNEROS_API_URL` | `http://localhost:3001` | Base URL for the BannerOS API server |
-| `MCP_PORT` | _(unset = stdio mode)_ | Set to a port number (e.g. `3002`) to run as HTTP server instead of stdio |
+| `MCP_PORT` | _(unset = stdio mode)_ | Set to a port number (e.g. `3002`) to run as streamable HTTP server on `POST /mcp` instead of stdio |
 
 ## Example Usage
 

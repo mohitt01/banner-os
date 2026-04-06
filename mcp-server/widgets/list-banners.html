@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BannerOS — Banners</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px; line-height: 1.5; color: #1a1a2e;
+      background: #ffffff; padding: 14px;
+    }
+    h1 { font-size: 15px; font-weight: 600; margin-bottom: 10px; color: #1a1a2e; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 9999px;
+      font-size: 11px; font-weight: 500; line-height: 1.4;
+    }
+    .badge-promotional { background: #dbeafe; color: #1d4ed8; }
+    .badge-support { background: #fef3c7; color: #92400e; }
+    .badge-informational { background: #d1fae5; color: #065f46; }
+    .badge-active { background: #d1fae5; color: #065f46; }
+    .badge-inactive { background: #f3f4f6; color: #6b7280; }
+    .badge-draft { background: #e0e7ff; color: #4338ca; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th {
+      text-align: left; padding: 6px 8px; background: #f3f4f6;
+      color: #374151; font-weight: 600; border-bottom: 1px solid #e5e7eb;
+    }
+    td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; }
+    tr:hover td { background: #f9fafb; }
+    .mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; }
+    .text-muted { color: #6b7280; }
+    .text-sm { font-size: 11px; }
+    .empty { text-align: center; padding: 24px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div id="root"><p class="text-muted">Loading…</p></div>
+  <script type="module">
+/*__EXT_APPS_BUNDLE__*/
+const { App } = globalThis.ExtApps;
+(async () => {
+  const app = new App({ name: "BannerOS", version: "2.0.0" }, {});
+  const root = document.getElementById("root");
+
+  app.ontoolresult = ({ content }) => {
+    try {
+      const data = JSON.parse(content[0].text);
+      render(data);
+    } catch (e) {
+      root.innerHTML = '<p style="color:#ef4444">Failed to parse tool result</p>';
+    }
+  };
+
+  await app.connect();
+
+  function render(data) {
+    const banners = data.banners || [];
+    if (!banners.length) {
+      root.innerHTML = '<div class="empty">No banners found</div>';
+      return;
+    }
+    let html = '<h1>Banners (' + banners.length + ')</h1>';
+    html += '<table><thead><tr><th>Title</th><th>Type</th><th>Status</th><th>Priority</th><th>Targeting</th></tr></thead><tbody>';
+    for (const b of banners) {
+      const rules = b.targeting_rules || {};
+      const targeting = [];
+      if (rules.platforms?.length) targeting.push(rules.platforms.join(', '));
+      if (rules.countries?.length) targeting.push(rules.countries.join(', '));
+      if (rules.user_segments?.length) targeting.push(rules.user_segments.join(', '));
+      if (rules.is_authenticated !== undefined) targeting.push(rules.is_authenticated ? 'auth' : 'anon');
+      html += '<tr>'
+        + '<td><strong>' + esc(b.title) + '</strong><br><span class="text-muted text-sm mono">' + esc(b.id.slice(0, 8)) + '…</span></td>'
+        + '<td><span class="badge badge-' + esc(b.type) + '">' + esc(b.type) + '</span></td>'
+        + '<td><span class="badge badge-' + esc(b.status) + '">' + esc(b.status) + '</span></td>'
+        + '<td>' + b.priority + '</td>'
+        + '<td class="text-sm">' + (targeting.length ? esc(targeting.join(' · ')) : '<span class="text-muted">all users</span>') + '</td>'
+        + '</tr>';
+    }
+    html += '</tbody></table>';
+    root.innerHTML = html;
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+})();
+  </script>
+</body>
+</html>

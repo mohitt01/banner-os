@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BannerOS — Evaluate</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px; line-height: 1.5; color: #1a1a2e;
+      background: #ffffff; padding: 14px;
+    }
+    h1 { font-size: 15px; font-weight: 600; margin-bottom: 10px; color: #1a1a2e; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 9999px;
+      font-size: 11px; font-weight: 500; line-height: 1.4;
+    }
+    .badge-promotional { background: #dbeafe; color: #1d4ed8; }
+    .badge-support { background: #fef3c7; color: #92400e; }
+    .badge-informational { background: #d1fae5; color: #065f46; }
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 8px; margin-bottom: 12px;
+    }
+    .stat-box {
+      text-align: center; padding: 10px 8px; border-radius: 8px;
+      background: #f9fafb; border: 1px solid #e5e7eb;
+    }
+    .stat-box .value { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+    .stat-box .label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+    .card {
+      border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;
+      margin-bottom: 8px; background: #fafafa;
+    }
+    .flex { display: flex; align-items: center; gap: 6px; }
+    .text-muted { color: #6b7280; }
+    .text-sm { font-size: 11px; }
+    .mt-2 { margin-top: 8px; }
+    .mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; }
+    .empty { text-align: center; padding: 24px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div id="root"><p class="text-muted">Loading…</p></div>
+  <script type="module">
+/*__EXT_APPS_BUNDLE__*/
+const { App } = globalThis.ExtApps;
+(async () => {
+  const app = new App({ name: "BannerOS", version: "2.0.0" }, {});
+  const root = document.getElementById("root");
+
+  app.ontoolresult = ({ content }) => {
+    try {
+      const data = JSON.parse(content[0].text);
+      render(data);
+    } catch (e) {
+      root.innerHTML = '<p style="color:#ef4444">Failed to parse tool result</p>';
+    }
+  };
+
+  await app.connect();
+
+  function render(data) {
+    const banners = data.banners || [];
+    const count = data.count || 0;
+    let html = '<h1>Evaluation Result</h1>';
+    html += '<div class="stat-grid">'
+      + '<div class="stat-box"><div class="value">' + count + '</div><div class="label">Matched Banners</div></div>'
+      + '</div>';
+    if (!banners.length) {
+      html += '<div class="empty">No banners matched the given context</div>';
+    } else {
+      for (const b of banners) {
+        html += '<div class="card">'
+          + '<div class="flex"><strong>' + esc(b.title) + '</strong>'
+          + '<span class="badge badge-' + esc(b.type) + '">' + esc(b.type) + '</span>'
+          + '</div>';
+        if (b.body) html += '<p class="text-sm mt-2">' + esc(b.body) + '</p>';
+        if (b.cta_text) html += '<p class="text-sm mt-2" style="color:#2563eb">' + esc(b.cta_text) + (b.cta_url ? ' → ' + esc(b.cta_url) : '') + '</p>';
+        html += '<p class="text-sm text-muted mt-2 mono">' + esc(b.id) + '</p>';
+        html += '</div>';
+      }
+    }
+    root.innerHTML = html;
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+})();
+  </script>
+</body>
+</html>

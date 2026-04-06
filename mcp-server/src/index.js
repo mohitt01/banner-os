@@ -2,11 +2,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
-import { createServer } from "http";
+import express from "express";
 import { z } from "zod";
-import { readFileSync } from "fs";
-import { resolve, dirname } from "path";
-import { fileURLToPath } from "url";
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   DOCS_TREE, PLACEMENT_SCHEMAS, FALLBACK_POLICIES, CACHING_GUIDANCE,
   TELEMETRY_EXPECTATIONS, INTEGRATION_PATTERNS, loadContent,
@@ -19,42 +19,51 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const server = new McpServer({
-  name: "banneros",
-  version: "2.0.0",
-  description: "BannerOS integration & operations server — guidance tools + live API operations with rich UI",
-});
-
-// ─── Helper: register a tool with an MCP App UI view ─────────────────────────
-
-function registerToolWithUI(name, opts, handler, viewHtml) {
-  const resourceUri = `ui://${name}/view.html`;
-
-  registerAppTool(server, name, {
-    ...opts,
-    _meta: { ui: { resourceUri } },
-  }, handler);
-
-  registerAppResource(server, resourceUri, resourceUri, {
-    mimeType: RESOURCE_MIME_TYPE,
-  }, async () => ({
-    contents: [{ uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: viewHtml }],
-  }));
-}
-
 // ─── Helper: wrap API calls with error handling ──────────────────────────────
 
-async function safeApiCall(fn) {
-  try {
-    const data = await fn();
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-  } catch (err) {
-    return {
-      content: [{ type: "text", text: JSON.stringify({ error: err.message }, null, 2) }],
-      isError: true,
-    };
-  }
+function safeApiCall(fn) {
+  return (async () => {
+    try {
+      const data = await fn();
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({ error: err.message }, null, 2) }],
+        isError: true,
+      };
+    }
+  })();
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Server factory — creates a fully configured McpServer instance.
+// HTTP mode creates a single shared server; stdio mode uses one too.
+// ═════════════════════════════════════════════════════════════════════════════
+
+function createServer() {
+  const server = new McpServer({
+    name: "banneros",
+    version: "2.0.0",
+  }, {
+    instructions: "BannerOS integration & operations server. Use list_banners or health_check to verify connectivity before other operations. For integration guidance, call get_skill for the full guide or get_docs for specific topics.",
+  });
+
+  // ─── Helper: register a tool + its MCP App UI view ─────────────────────────
+
+  function registerToolWithUI(name, opts, handler, viewHtml) {
+    const resourceUri = `ui://${name}/view.html`;
+
+    registerAppTool(server, name, {
+      ...opts,
+      _meta: { ui: { resourceUri } },
+    }, handler);
+
+    registerAppResource(server, name, resourceUri, {},
+      async () => ({
+        contents: [{ uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: viewHtml }],
+      }),
+    );
+  }
 
 // ═════════════════════════════════════════════════════════════════════════════
 // PART 1: API OPERATION TOOLS (live calls to BannerOS API)
@@ -68,6 +77,7 @@ registerToolWithUI(
     title: "Health Check",
     description: "Check if the BannerOS API server is running and healthy",
     inputSchema: {},
+    annotations: { readOnlyHint: true },
   },
   async () => safeApiCall(() => api.healthCheck()),
   healthView,
@@ -85,6 +95,7 @@ registerToolWithUI(
       status: z.enum(["active", "inactive", "draft"]).optional().describe("Filter by banner status"),
       type: z.enum(["promotional", "support", "informational"]).optional().describe("Filter by banner type"),
     },
+    annotations: { readOnlyHint: true },
   },
   async ({ tenant_id, status, type }) =>
     safeApiCall(() => api.listBanners(tenant_id, { status, type })),
@@ -123,7 +134,7 @@ server.tool(
       user_ids: z.array(z.string()).optional(),
       min_app_version: z.string().optional(),
     }).optional().describe("Targeting rules object"),
-    style: z.record(z.string()).optional().describe("Custom style overrides"),
+    style: z.object({}).passthrough().optional().describe("Custom style overrides as key-value pairs"),
     cta_text: z.string().optional().describe("Call-to-action button text"),
     cta_url: z.string().optional().describe("Call-to-action URL"),
     start_date: z.string().optional().describe("ISO 8601 start date"),
@@ -153,7 +164,7 @@ server.tool(
       user_ids: z.array(z.string()).optional(),
       min_app_version: z.string().optional(),
     }).optional(),
-    style: z.record(z.string()).optional(),
+    style: z.object({}).passthrough().optional(),
     cta_text: z.string().optional(),
     cta_url: z.string().optional(),
     start_date: z.string().optional(),
@@ -192,6 +203,7 @@ registerToolWithUI(
         app_version: z.string().optional(),
       }).optional().describe("User/session context for targeting"),
     },
+    annotations: { readOnlyHint: true },
   },
   async ({ tenant_id, user_id, context }) =>
     safeApiCall(() => api.evaluateBanners({ tenant_id, user_id, context })),
@@ -208,7 +220,7 @@ server.tool(
     tenant_id: z.string().optional().describe("Tenant ID. Defaults to 'default'"),
     user_id: z.string().optional().describe("User ID"),
     action: z.enum(["view", "click", "dismiss"]).optional().describe("Impression action. Defaults to 'view'"),
-    context: z.record(z.any()).optional().describe("Additional context metadata"),
+    context: z.object({}).passthrough().optional().describe("Additional context metadata"),
   },
   async (params) => safeApiCall(() => api.recordImpression(params)),
 );
@@ -236,6 +248,7 @@ registerToolWithUI(
     inputSchema: {
       banner_id: z.string().describe("The banner UUID"),
     },
+    annotations: { readOnlyHint: true },
   },
   async ({ banner_id }) => safeApiCall(() => api.getBannerStats(banner_id)),
   statsView,
@@ -251,6 +264,7 @@ registerToolWithUI(
     inputSchema: {
       tenant_id: z.string().optional().describe("Tenant ID. Defaults to 'default'"),
     },
+    annotations: { readOnlyHint: true },
   },
   async ({ tenant_id }) => safeApiCall(() => api.getTenantStats(tenant_id)),
   statsView,
@@ -266,6 +280,7 @@ registerToolWithUI(
     inputSchema: {
       tenant_id: z.string().optional().describe("Tenant ID. Defaults to 'default'"),
     },
+    annotations: { readOnlyHint: true },
   },
   async ({ tenant_id }) => safeApiCall(() => api.validateBanners(tenant_id)),
   validateView,
@@ -533,49 +548,71 @@ server.tool(
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function generatePlacementSchema(page, placement) {
-  const defaults = {
-    top: { reserved_height: "80px", z_index: 10, position: "relative", display: "block" },
-    sidebar: { reserved_height: "auto", z_index: 1, position: "relative", display: "block" },
-    inline: { reserved_height: "60px", z_index: 1, position: "relative", display: "block" },
-    modal: { reserved_height: "auto", z_index: 1000, position: "fixed", display: "flex" },
-  };
-  const base = defaults[placement] || defaults.top;
-  return {
-    page,
-    placement,
-    ...base,
-    max_banners: placement === "modal" ? 1 : 3,
-    render_strategy: placement === "modal" ? "overlay" : "stack",
-    animation: placement === "modal" ? "fade-in" : "slide-down",
-    dismiss_behavior: "remove from DOM, record dismiss impression",
-  };
+  function generatePlacementSchema(page, placement) {
+    const defaults = {
+      top: { reserved_height: "80px", z_index: 10, position: "relative", display: "block" },
+      sidebar: { reserved_height: "auto", z_index: 1, position: "relative", display: "block" },
+      inline: { reserved_height: "60px", z_index: 1, position: "relative", display: "block" },
+      modal: { reserved_height: "auto", z_index: 1000, position: "fixed", display: "flex" },
+    };
+    const base = defaults[placement] || defaults.top;
+    return {
+      page,
+      placement,
+      ...base,
+      max_banners: placement === "modal" ? 1 : 3,
+      render_strategy: placement === "modal" ? "overlay" : "stack",
+      animation: placement === "modal" ? "fade-in" : "slide-down",
+      dismiss_behavior: "remove from DOM, record dismiss impression",
+    };
+  }
+
+  return server;
 }
 
-// ─── Start ───────────────────────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// Start — stdio or streamable HTTP depending on MCP_PORT env var
+// ═════════════════════════════════════════════════════════════════════════════
 
 const MCP_PORT = process.env.MCP_PORT;
 
 if (MCP_PORT) {
-  // HTTP mode — used in Docker / network deployments
-  const httpServer = createServer(async (req, res) => {
-    if (req.method === "POST" && req.url === "/mcp") {
-      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  // Streamable HTTP mode — used by Windsurf serverUrl, Docker, network deployments.
+  // POST /mcp → JSON-RPC over streamable HTTP (stateless — fresh server+transport per request)
+  // GET /health → simple health check
+  const app = express();
+  app.use(express.json());
+
+  app.post("/mcp", async (req, res) => {
+    try {
+      const server = createServer();
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined, // stateless
+      });
+      res.on("close", () => {
+        transport.close();
+        server.close();
+      });
       await server.connect(transport);
-      await transport.handleRequest(req, res);
-    } else if (req.method === "GET" && req.url === "/health") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ status: "ok", service: "BannerOS MCP Server", version: "2.0.0" }));
-    } else {
-      res.writeHead(404);
-      res.end("Not found");
+      await transport.handleRequest(req, res, req.body);
+    } catch (err) {
+      console.error("MCP request error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: err.message }, id: null });
+      }
     }
   });
-  httpServer.listen(parseInt(MCP_PORT, 10), "0.0.0.0", () => {
+
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok", service: "BannerOS MCP Server", version: "2.0.0" });
+  });
+
+  app.listen(parseInt(MCP_PORT, 10), "0.0.0.0", () => {
     console.log(`BannerOS MCP Server (HTTP) running on http://0.0.0.0:${MCP_PORT}/mcp`);
   });
 } else {
   // Stdio mode — used by IDEs (Windsurf, Cursor, Claude Code)
+  const server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
