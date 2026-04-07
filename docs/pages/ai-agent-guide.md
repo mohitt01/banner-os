@@ -86,7 +86,7 @@ You are integrating BannerOS — a banner management platform — into a client 
 Before writing any integration code, you MUST ask the user for:
 
 1. **BannerOS setup** — Ask: "Are you using the hosted BannerOS platform or running it locally?"
-   - **Hosted**: Use the URL provided by your team or deployment
+   - **Hosted**: `https://your-domain.com/api`
    - **Local**: `http://localhost:3001/api`
 2. **Tenant ID** — Do not assume. Ask: "What is your BannerOS tenant ID?" Default is `default`.
 3. **Which pages need banners** — Ask: "Which pages should show banners?" (e.g., home, cart, checkout, product, account)
@@ -96,10 +96,10 @@ Before writing any integration code, you MUST ask the user for:
 
 Examples:
 ```bash
-# Hosted version
+# If using hosted BannerOS
 export BANNEROS_API_BASE_URL=https://your-domain.com/api
 
-# Local development
+# If running BannerOS locally
 export BANNEROS_API_BASE_URL=http://localhost:3001/api
 ```
 
@@ -360,6 +360,16 @@ Do NOT generate code that does any of the following.
 **Bad:**
 ```js
 const res = await fetch('http://localhost:3001/api/evaluate', {
+  body: JSON.stringify({ tenant_id: 'default', ... }),
+});
+```
+
+**Good:**
+```js
+const API_URL = process.env.BANNEROS_API_BASE_URL;
+const res = await fetch(`${API_URL}/evaluate`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ tenant_id: 'default', ... }),
 });
 ```
@@ -788,25 +798,6 @@ Run through every item before considering the integration complete.
 - [ ] Banners render with type-specific styling (promotional/support/informational)
 - [ ] Checkout page: max 1 banner, no cache, no stale-on-error, no personalization in demo
 
-## How to test locally
-
-### 1. Start BannerOS
-
-```bash
-cd banner-ops
-npm run dev
-```
-
-This starts the API on `http://localhost:3001`, dashboard on `http://localhost:3000`, docs on `http://localhost:3003`, and demo app on `http://localhost:5000`.
-
-### 2. Seed demo banners
-
-```bash
-cd banner-ops/api && node src/seed.js
-```
-
-Creates 6 demo banners across 3 types with varied targeting rules.
-
 ### 3. Verify banner rendering
 
 Open your app. Banners should appear on the pages you integrated. Check:
@@ -888,7 +879,7 @@ node scripts/banneros-client.js <command> [options-as-json]
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BANNEROS_API_BASE_URL` | `http://localhost:3001/api` | BannerOS API base URL |
+| `BANNEROS_API_BASE_URL` | Required | BannerOS API base URL |
 | `BANNEROS_TENANT` | `default` | Tenant ID for all operations |
 
 ## Commands
@@ -1018,7 +1009,7 @@ The MCP server gives your AI everything from the Skill, **plus** live tools to m
 {
   "mcpServers": {
     "banneros": {
-      "serverUrl": "http://localhost:3001/mcp"
+      "serverUrl": "https://your-domain.com/mcp" // Or http://localhost:3001/mcp for local
     }
   }
 }
@@ -1027,10 +1018,8 @@ The MCP server gives your AI everything from the Skill, **plus** live tools to m
 **Claude Code:**
 
 ```bash
-claude mcp add --transport http banneros http://localhost:3001/mcp
+claude mcp add --transport http banneros https://your-domain.com/mcp # Or https://localhost:3001/mcp for local
 ```
-
-Replace with your deployed URL in production (e.g. `https://your-domain.com/mcp`).
 
 </details>
 

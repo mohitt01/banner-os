@@ -1,46 +1,58 @@
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import CodeBlock from './CodeBlock';
+import MarkdownIt from 'markdown-it';
+import { useMemo, useEffect, useRef } from 'react';
+
+const md = MarkdownIt({ html: true, linkify: true, typographer: true });
 
 export default function MarkdownPage({ content }) {
+  const ref = useRef(null);
+  const html = useMemo(() => {
+    const baseUrl = window.location.origin;
+    const processedContent = content.replace(/https:\/\/your-domain\.com/g, baseUrl);
+    return md.render(processedContent);
+  }, [content]);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const pres = ref.current.querySelectorAll('pre');
+    pres.forEach((pre) => {
+      if (pre.querySelector('.copy-btn')) return;
+      pre.style.position = 'relative';
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      `;
+      btn.addEventListener('click', () => {
+        const code = pre.querySelector('code');
+        navigator.clipboard.writeText(code ? code.textContent : pre.textContent);
+        btn.classList.add('copied');
+        btn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        `;
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          `;
+        }, 1000);
+      });
+      pre.appendChild(btn);
+    });
+  }, [html]);
+
   return (
-    <div className="prose-custom">
-      <Markdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
-        components={{
-          h1: ({ children }) => <h1 className="text-3xl font-bold text-gray-900 mb-2">{children}</h1>,
-          h2: ({ children }) => <h2 className="text-xl font-semibold text-gray-900 mt-8 mb-3 pb-2 border-b border-gray-100">{children}</h2>,
-          h3: ({ children }) => <h3 className="text-base font-semibold text-gray-800 mt-5 mb-2">{children}</h3>,
-          p: ({ children }) => <p className="text-sm text-gray-700 leading-relaxed mb-3">{children}</p>,
-          ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 mb-3">{children}</ul>,
-          ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 text-sm text-gray-700 mb-3">{children}</ol>,
-          li: ({ children }) => <li>{children}</li>,
-          strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
-          a: ({ href, children }) => <a href={href} className="text-indigo-600 hover:underline">{children}</a>,
-          code: ({ className, children, ...props }) => {
-            const match = /language-(\w+)/.exec(className || '');
-            if (match) {
-              return <CodeBlock language={match[1]}>{String(children).replace(/\n$/, '')}</CodeBlock>;
-            }
-            return <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono text-indigo-700">{children}</code>;
-          },
-          pre: ({ children }) => <>{children}</>,
-          table: ({ children }) => (
-            <div className="overflow-hidden border border-gray-200 rounded-lg my-4">
-              <table className="w-full text-sm">{children}</table>
-            </div>
-          ),
-          thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
-          th: ({ children }) => <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">{children}</th>,
-          td: ({ children }) => <td className="px-4 py-2 text-xs text-gray-700 border-t border-gray-100">{children}</td>,
-          hr: () => <hr className="my-8 border-gray-200" />,
-          blockquote: ({ children }) => <blockquote className="border-l-4 border-indigo-200 pl-4 my-4 text-sm text-gray-600 italic">{children}</blockquote>,
-        }}
-      >
-        {content}
-      </Markdown>
-    </div>
+    <div
+      ref={ref}
+      className="prose prose-sm prose-indigo max-w-none"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }

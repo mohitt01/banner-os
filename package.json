@@ -10,6 +10,7 @@
     "docs": "cd docs && npm run dev",
     "seed": "cd api && node src/seed.js",
     "install:all": "npm install && cd api && npm install && cd ../dashboard && npm install && cd ../docs && npm install && cd ../mcp-server && npm install",
+    "ci:all": "npm ci && cd api && npm ci && cd ../dashboard && npm ci && cd ../docs && npm ci && cd ../mcp-server && npm ci",
     "dev": "concurrently \"npm run api\" \"npm run dashboard\" \"npm run docs\"",
     "build": "cd dashboard && npm run build && cd ../docs && npm run build",
     "start": "node server.js"

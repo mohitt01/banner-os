@@ -28,8 +28,9 @@ You are integrating BannerOS — a banner management platform — into a client 
 Before writing any integration code, you MUST ask the user for:
 
 1. **BannerOS setup** — Ask: "Are you using the hosted BannerOS platform or running it locally?"
-   - **Hosted**: Use the URL provided by your team or deployment
+   - **Hosted**: `https://your-domain.com/api`
    - **Local**: `http://localhost:3001/api`
+   ...or ask for the correct URL if the above are not applicable
 2. **Tenant ID** — Do not assume. Ask: "What is your BannerOS tenant ID?" Default is `default`.
 3. **Which pages need banners** — Ask: "Which pages should show banners?" (e.g., home, cart, checkout, product, account)
 4. **Framework** — Detect from the codebase if possible. If ambiguous, ask.

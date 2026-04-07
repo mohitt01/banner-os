@@ -60,10 +60,10 @@ Content-Type: application/json
 Before integrating, set your API base URL:
 
 ```bash
-# Local development
+# If running BannerOS locally
 export BANNEROS_API_BASE_URL=http://localhost:3001/api
 
-# Or hosted version
+# If using hosted version
 export BANNEROS_API_BASE_URL=https://your-domain.com/api
 ```
 

@@ -24,7 +24,8 @@ const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
-const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+const HOST = process.env.HOST || "0.0.0.0";
+const BASE_URL = process.env.BASE_URL || `http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}`;
 
 // ─── Set BANNEROS_API_BASE_URL for MCP server's api.js (self-referencing in monolith)
 process.env.BANNEROS_API_BASE_URL = `${BASE_URL}/api`;
@@ -118,7 +119,7 @@ if (existsSync(dashboardDist)) {
 // Start
 // ═════════════════════════════════════════════════════════════════════════════
 
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, HOST, () => {
   console.log(`\nBannerOS running on ${BASE_URL}`);
   console.log(`  Dashboard: ${BASE_URL}/`);
   console.log(`  API:       ${BASE_URL}/api`);
