@@ -75,7 +75,11 @@ export function buildDocsTree() {
   return {
     title: "BannerOS Documentation",
     source: "docs/pages/ directory (markdown)",
-    docs_site: (process.env.BASE_URL || "http://localhost:3001") + "/docs",
+    docs_site: (() => {
+      const apiBase = process.env.BANNEROS_API_BASE_URL || "http://localhost:3001/api";
+      const serverUrl = apiBase.replace(/\/api$/, '');
+      return serverUrl + "/docs";
+    })(),
     sections: files,
   };
 }

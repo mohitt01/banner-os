@@ -94,8 +94,8 @@ function HomePage() {
 
 ```tsx
 // lib/banneros.ts
-const API_URL = process.env.BANNEROS_API_URL || 'http://localhost:3001/api';
-const TENANT_ID = process.env.BANNEROS_TENANT_ID!;
+const API_URL = process.env.BANNEROS_API_BASE_URL || 'http://localhost:3001/api';
+const TENANT_ID = process.env.BANNEROS_TENANT || 'default';
 
 export async function getBanners(userId: string, context: Record<string, any>) {
   try {

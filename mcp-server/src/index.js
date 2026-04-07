@@ -75,7 +75,7 @@ export function createServer() {
     name: "banneros",
     version: "2.0.0",
   }, {
-    instructions: "BannerOS integration & operations server. Use list_banners or health_check to verify connectivity before other operations. For integration guidance, call get_skill for the full guide or get_docs for specific topics.",
+    instructions: "BannerOS integration & operations server. Configure BANNEROS_API_BASE_URL (e.g., http://localhost:3001/api). Use list_banners or health_check to verify connectivity before other operations. For integration guidance, call get_skill for the full guide or get_docs for specific topics.",
   });
 
   // ─── Helper: register a tool + its MCP App UI view ─────────────────────────

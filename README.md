@@ -6,16 +6,54 @@ A mini banner management platform with a REST API, dashboard UI, documentation s
 
 ```
 banner-ops/
-├── api/          # Express + SQLite REST API (port 3001)
-├── dashboard/    # React + Vite dashboard UI (port 3000)
-├── docs/         # React + Vite documentation site (port 3003)
-└── mcp-server/   # MCP server — guidance + live API ops (port 3002 HTTP / stdio)
+|-- api/          # Express REST API (SQLite/Valkey)
+|-- dashboard/    # React dashboard UI (static build)
+|-- docs/         # React documentation site (static build)
+|-- mcp-server/   # MCP server (mounted in unified server)
+|-- server.js      # Unified server (API + Dashboard + Docs + MCP)
 ```
 
-- **API**: Node.js + Express + better-sqlite3 (embedded SQLite DB)
-- **Dashboard**: React + Vite + TailwindCSS + Lucide icons
-- **Docs**: React + Vite + TailwindCSS
-- **MCP Server**: Model Context Protocol server with 23 tools (stdio for IDEs, HTTP for Docker)
+- **API**: Node.js + Express + SQLite (default) or Valkey/Redis (production)
+- **Dashboard**: React + Vite + TailwindCSS + Lucide icons (static build)
+- **Docs**: React + Vite + TailwindCSS (static build)
+- **MCP Server**: Model Context Protocol server with 23 tools (mounted in unified server)
+- **Unified Server**: Single Express process serving everything on port 3001
+
+## Database Options
+
+BannerOS supports two database backends:
+
+### SQLite (Default)
+- **Best for**: Local development, small deployments
+- **No external dependencies**
+- **File-based storage** at `./api/banneros.db`
+
+### Valkey/Redis (Production)
+- **Best for**: Production, high concurrency, distributed deployments
+- **In-memory with persistence**
+- **Cluster support**
+- **Use Valkey** (open-source Redis fork) or Redis
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+# Database (choose ONE)
+# Option 1: SQLite (default)
+DATABASE_PATH=./api/banneros.db
+
+# Option 2: Valkey/Redis (production)
+BANNEROS_DB_URL=redis://localhost:6379
+# Or with TLS:
+BANNEROS_DB_URL=rediss://user:pass@valkey.example.com:6380
+# Or cluster:
+BANNEROS_DB_URL=redis://valkey-cluster:6379/0
+
+# API Configuration
+PORT=3001
+BANNEROS_API_BASE_URL=http://localhost:3001/api
+```
 
 ## Quick Start
 
@@ -23,22 +61,27 @@ banner-ops/
 # Install all dependencies
 npm run install:all
 
-# Start all services
-npm run dev
+# Build dashboard and docs
+npm run build
+
+# Start unified server (API + Dashboard + Docs + MCP)
+npm start
 ```
 
 | Service    | URL                         |
 |------------|-----------------------------|
-| API        | http://localhost:3001        |
-| Dashboard  | http://localhost:3000        |
-| MCP Server | http://localhost:3002 (HTTP) |
-| Docs       | http://localhost:3003        |
+| API        | http://localhost:3001/api    |
+| Dashboard  | http://localhost:3001/       |
+| MCP Server | http://localhost:3001/mcp    |
+| Docs       | http://localhost:3001/docs   |
 
 ## Docker
 
 ```bash
-# Core platform (API + Dashboard + Docs + MCP Server)
-docker compose up
+# Build and run unified server (API + Dashboard + Docs + MCP)
+# Uses SQLite by default. Set BANNEROS_DB_URL to use Valkey/Redis.
+docker build -t banneros .
+docker run -p 3001:3001 -e DATABASE_PATH=/data/banneros.db banneros
 ```
 
 ## API Endpoints

@@ -9,7 +9,14 @@ order: 5
 
 Complete reference for the BannerOS REST API.
 
-**Base URL:** `http://localhost:3001`
+## Base URL
+
+Set `BANNEROS_API_BASE_URL` to one of:
+
+- **Local development:** `http://localhost:3001/api`
+- **Hosted version:** `https://your-domain.com/api`
+
+All endpoints below are relative to your `BANNEROS_API_BASE_URL`.
 
 ## Banners
 

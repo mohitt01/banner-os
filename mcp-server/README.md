@@ -1,38 +1,28 @@
 # BannerOS MCP Server
 
-An MCP (Model Context Protocol) server for BannerOS — combines **live API operations** with **integration guidance** and **rich UI widgets** via [MCP Apps](https://apps.extensions.modelcontextprotocol.io/api/).
+An MCP (Model Context Protocol) server for BannerOS — combines **live API operations** with **integration guidance** and **rich visual dashboards** via [MCP Apps](https://apps.extensions.modelcontextprotocol.io/api/).
 
-Developers can manage banners, evaluate targeting, view stats, and validate configurations directly from their IDE's AI chat — with interactive visual dashboards rendered inline.
+Manage banners, evaluate targeting, view stats, and validate configurations directly from your IDE's AI chat — with interactive visual widgets rendered inline.
+
+## Why MCP?
+
+The MCP server is the **most powerful** way to use BannerOS with an AI agent. It includes everything from the Agent Skill, **plus**:
+
+- **Live API tools** — create, update, delete banners, evaluate targeting, record impressions, view stats — all from chat
+- **Rich UI (MCP Apps)** — tools render interactive HTML dashboards inline in your IDE. Banner lists, stats, validation reports appear as styled cards — not raw JSON.
+- **Documentation as resources** — your AI can browse all BannerOS docs without leaving the conversation
 
 ## Architecture
 
-- **API operation tools** — make live HTTP calls to the BannerOS API (`BANNEROS_API_URL`, default `http://localhost:3001`)
+- **API operation tools** — live HTTP calls to the BannerOS API (`BANNEROS_API_BASE_URL`, default `http://localhost:3001/api`)
 - **Guidance tools** — serve documentation, placement schemas, integration patterns from `docs/pages/` markdown files
-- **MCP App UI widgets** — tools marked with 🖼 render interactive HTML views inline in MCP Apps-capable clients (Windsurf, Claude, etc.)
-- **Dual transport** — stdio (default, for IDEs) or streamable HTTP (`MCP_PORT` env var, for Docker/network)
+- **MCP App UI widgets** — tools marked with 🖼 render interactive HTML views inline in MCP Apps-capable clients (Windsurf, Claude, etc.). On other clients, they return structured JSON.
+- **HTTP transport** — streamable HTTP server (`MCP_PORT` env var, for IDEs and Docker/network)
 - **ext-apps bundle inlining** — widget HTML files in `widgets/` have the `@modelcontextprotocol/ext-apps` browser bundle inlined at startup (iframe CSP blocks CDN imports)
 
 ## Setup
 
-### Windsurf / Cascade (stdio)
-
-Add to your Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "banneros": {
-      "command": "node",
-      "args": ["/absolute/path/to/banner-ops/mcp-server/src/index.js"],
-      "env": {
-        "BANNEROS_API_URL": "http://localhost:3001"
-      }
-    }
-  }
-}
-```
-
-### Windsurf / Cascade (HTTP — serverUrl)
+### Windsurf / Cascade (HTTP)
 
 Start the server in HTTP mode, then configure Windsurf to connect:
 
@@ -50,19 +40,13 @@ cd mcp-server && MCP_PORT=3002 node src/index.js
 }
 ```
 
-### Claude Code
+### Claude Code (HTTP)
 
 ```bash
 claude mcp add --transport http banneros http://localhost:3002/mcp
 ```
 
-Or stdio mode:
-
-```bash
-claude mcp add banneros node /absolute/path/to/banner-ops/mcp-server/src/index.js
-```
-
-### Cursor
+### Cursor (HTTP)
 
 Add to `.cursor/mcp.json` in your project:
 
@@ -70,11 +54,7 @@ Add to `.cursor/mcp.json` in your project:
 {
   "mcpServers": {
     "banneros": {
-      "command": "node",
-      "args": ["/absolute/path/to/banner-ops/mcp-server/src/index.js"],
-      "env": {
-        "BANNEROS_API_URL": "http://localhost:3001"
-      }
+      "serverUrl": "http://localhost:3002/mcp"
     }
   }
 }
@@ -129,23 +109,27 @@ Each resource serves the corresponding markdown file from `docs/pages/`:
 | API Reference | `banneros://docs/api-reference` | `docs/pages/api-reference.md` |
 | AI Agent Guide | `banneros://docs/ai-agent-guide` | `docs/pages/ai-agent-guide.md` |
 
-## MCP App UI Views
+## MCP App UI Views — Rich Visual Dashboards
 
-Tools with 🖼 render interactive HTML UIs inline in the chat using the [MCP Apps extension](https://apps.extensions.modelcontextprotocol.io/api/). On clients that don't support MCP Apps, tools still return structured JSON as usual.
+This is what makes the MCP server special. Tools with 🖼 render **interactive HTML dashboards** inline in the chat using the [MCP Apps extension](https://apps.extensions.modelcontextprotocol.io/api/). Your AI sees the same styled UI you do — no terminal output to parse.
 
-Views include:
-- **List Banners** — sortable table with type/status badges and targeting summary
-- **Evaluate Banners** — visual preview of matched banners with context
-- **Banner Stats / Tenant Stats** — dashboard with stat boxes, CTR, and daily breakdown
-- **Validate Banners** — error/warning report with severity badges
-- **Health Check** — status indicator with version info
+On clients that don't support MCP Apps, tools still return structured JSON.
+
+**Available views:**
+- **List Banners** — sortable table with type/status badges, targeting summary, priority indicators
+- **Evaluate Banners** — visual preview of matched banners with full context breakdown
+- **Banner Stats / Tenant Stats** — dashboard with stat boxes, CTR metrics, and daily breakdown charts
+- **Validate Banners** — error/warning report with severity badges and fix recommendations
+- **Health Check** — status indicator with version info and connection details
+
+Widget HTML files live in `widgets/` and use the `@modelcontextprotocol/ext-apps` browser bundle (inlined at startup to avoid CSP issues in sandboxed iframes).
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BANNEROS_API_URL` | `http://localhost:3001` | Base URL for the BannerOS API server |
-| `MCP_PORT` | _(unset = stdio mode)_ | Set to a port number (e.g. `3002`) to run as streamable HTTP server on `POST /mcp` instead of stdio |
+| `BANNEROS_API_BASE_URL` | `http://localhost:3001/api` | BannerOS API base URL (must include `/api` suffix) |
+| `MCP_PORT` | `3002` | Port for the HTTP MCP server (listens on `POST /mcp`) |
 
 ## Example Usage
 

@@ -1,5 +1,6 @@
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import CodeBlock from './CodeBlock';
 
 export default function MarkdownPage({ content }) {
@@ -7,6 +8,7 @@ export default function MarkdownPage({ content }) {
     <div className="prose-custom">
       <Markdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={{
           h1: ({ children }) => <h1 className="text-3xl font-bold text-gray-900 mb-2">{children}</h1>,
           h2: ({ children }) => <h2 className="text-xl font-semibold text-gray-900 mt-8 mb-3 pb-2 border-b border-gray-100">{children}</h2>,

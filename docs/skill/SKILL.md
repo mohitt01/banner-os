@@ -27,12 +27,23 @@ You are integrating BannerOS — a banner management platform — into a client 
 
 Before writing any integration code, you MUST ask the user for:
 
-1. **Tenant ID** — Do not assume. Ask: "What is your BannerOS tenant ID?" Default is `default` for local dev.
-2. **API base URL** — Ask: "Where is your BannerOS API running?" Default is `http://localhost:3001/api`.
+1. **BannerOS setup** — Ask: "Are you using the hosted BannerOS platform or running it locally?"
+   - **Hosted**: Use the URL provided by your team or deployment
+   - **Local**: `http://localhost:3001/api`
+2. **Tenant ID** — Do not assume. Ask: "What is your BannerOS tenant ID?" Default is `default`.
 3. **Which pages need banners** — Ask: "Which pages should show banners?" (e.g., home, cart, checkout, product, account)
 4. **Framework** — Detect from the codebase if possible. If ambiguous, ask.
 
-Do NOT hardcode tenant IDs or API URLs. Always resolve from environment variables or app config.
+**Environment variable**: Always use `BANNEROS_API_BASE_URL` in your integration code. Do NOT hardcode URLs.
+
+Examples:
+```bash
+# Hosted version
+export BANNEROS_API_BASE_URL=https://your-domain.com/api
+
+# Local development
+export BANNEROS_API_BASE_URL=http://localhost:3001/api
+```
 
 ## Integration workflow
 

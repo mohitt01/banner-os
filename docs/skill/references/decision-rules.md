@@ -4,7 +4,7 @@ Use these rules when making integration decisions. Rules are ordered by priority
 
 ## Universal rules (apply to every page)
 
-1. Never hardcode `tenant_id` or API base URL. Resolve from environment variable or app config.
+1. Never hardcode `tenant_id` or API base URL. Use `BANNEROS_API_BASE_URL` environment variable.
 2. Always include `tenant_id` in every evaluate and impression call.
 3. Always reserve layout space (`min-height`) for banner containers to prevent CLS.
 4. Always emit `view` impression on first render. Deduplicate — never re-fire on re-render.

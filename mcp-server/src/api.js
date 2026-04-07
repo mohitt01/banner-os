@@ -1,12 +1,13 @@
 /**
  * BannerOS API client — wraps HTTP calls to the BannerOS API server.
- * Uses native fetch (Node 18+). Base URL configurable via BANNEROS_API_URL env var.
+ * Uses native fetch (Node 18+). Base URL configurable via BANNEROS_API_BASE_URL env var.
+ * Expected format: http://localhost:3001/api or https://your-domain.com/api
  */
 
-const BASE_URL = process.env.BANNEROS_API_URL || "http://localhost:3001";
+const BANNEROS_API_BASE_URL = process.env.BANNEROS_API_BASE_URL || "http://localhost:3001/api";
 
 async function request(method, path, body) {
-  const url = `${BASE_URL}${path}`;
+  const url = `${BANNEROS_API_BASE_URL}${path}`;
   const opts = {
     method,
     headers: { "Content-Type": "application/json" },

@@ -5,7 +5,7 @@ Run through every item before considering the integration complete.
 ## Must be true before PR
 
 - [ ] `tenant_id` is resolved from environment variable or app config, not hardcoded
-- [ ] API base URL is resolved from environment variable or app config, not hardcoded
+- [ ] `BANNEROS_API_BASE_URL` is resolved from environment variable or app config, not hardcoded
 - [ ] `Content-Type: application/json` header is set on all API calls
 - [ ] Banner container has `min-height` set to prevent CLS
 - [ ] `POST /api/evaluate` is called with `tenant_id` and `context` on page mount

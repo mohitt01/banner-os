@@ -4,56 +4,46 @@ const { getDb } = require('../db');
 const router = express.Router();
 
 // Evaluate which banners to show for a user/context
-router.post('/', (req, res) => {
-  const db = getDb();
-  const { tenant_id = 'default', user_id, context = {} } = req.body;
+router.post('/', async (req, res) => {
+  try {
+    const db = getDb();
+    const { tenant_id = 'default', user_id, context = {} } = req.body;
 
-  const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-  // Get all active banners for this tenant
-  let banners = db.prepare(`
-    SELECT * FROM banners
-    WHERE tenant_id = ? AND status = 'active'
-    ORDER BY priority DESC, created_at DESC
-  `).all(tenant_id);
+    // Get all active banners for this tenant
+    let banners = await db.getBanners(tenant_id, { status: 'active' });
 
-  // Filter by date range
-  banners = banners.filter(b => {
-    if (b.start_date && b.start_date > now) return false;
-    if (b.end_date && b.end_date < now) return false;
-    return true;
-  });
+    // Filter by date range
+    banners = banners.filter(b => {
+      if (b.start_date && b.start_date > now) return false;
+      if (b.end_date && b.end_date < now) return false;
+      return true;
+    });
 
-  // Filter by targeting rules
-  banners = banners.filter(b => {
-    const rules = JSON.parse(b.targeting_rules);
-    return matchesTargetingRules(rules, { user_id, ...context });
-  });
+    // Filter by targeting rules
+    banners = banners.filter(b => {
+      return matchesTargetingRules(b.targeting_rules, { user_id, ...context });
+    });
 
-  // Check dismissed banners for this user
-  if (user_id) {
-    const dismissed = db.prepare(`
-      SELECT DISTINCT banner_id FROM impressions
-      WHERE tenant_id = ? AND user_id = ? AND action = 'dismiss'
-    `).all(tenant_id, user_id).map(r => r.banner_id);
+    // Check dismissed banners for this user
+    if (user_id) {
+      const dismissed = await db.getDismissedBanners(tenant_id, user_id);
+      banners = banners.filter(b => !dismissed.includes(b.id));
+    }
 
-    banners = banners.filter(b => !dismissed.includes(b.id));
+    // Apply tenant config limits
+    const tenant = await db.getTenant(tenant_id);
+    const config = tenant ? tenant.config : {};
+    const maxBanners = config.maxBannersPerPage || 3;
+
+    banners = banners.slice(0, maxBanners);
+
+    res.json({ banners, count: banners.length });
+  } catch (error) {
+    console.error('Error evaluating banners:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  // Apply tenant config limits
-  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenant_id);
-  const config = tenant ? JSON.parse(tenant.config) : {};
-  const maxBanners = config.maxBannersPerPage || 3;
-
-  banners = banners.slice(0, maxBanners);
-
-  const parsed = banners.map(b => ({
-    ...b,
-    targeting_rules: JSON.parse(b.targeting_rules),
-    style: JSON.parse(b.style),
-  }));
-
-  res.json({ banners: parsed, count: parsed.length });
 });
 
 function matchesTargetingRules(rules, context) {

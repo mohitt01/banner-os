@@ -10,8 +10,7 @@
  * Environment variables:
  *   PORT                 — HTTP port (default 3001)
  *   DATABASE_PATH        — SQLite DB file path (default ./api/banneros.db)
- *   BASE_URL             — Public base URL, e.g. https://banneros.onrender.com (default http://localhost:$PORT)
- *   BANNEROS_API_URL     — Internal API base for MCP server (default http://localhost:$PORT)
+ *   BASE_URL             — Public base URL (default http://localhost:$PORT)
  *   NODE_ENV             — "production" to serve static builds, otherwise dev proxy info
  */
 
@@ -27,10 +26,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || "3001", 10);
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
-// ─── Set BANNEROS_API_URL for MCP server's api.js (self-referencing in monolith)
-if (!process.env.BANNEROS_API_URL) {
-  process.env.BANNEROS_API_URL = `http://localhost:${PORT}`;
-}
+// ─── Set BANNEROS_API_BASE_URL for MCP server's api.js (self-referencing in monolith)
+process.env.BANNEROS_API_BASE_URL = `${BASE_URL}/api`;
 
 // ─── Set DATABASE_PATH for API db.js
 if (process.env.DATABASE_PATH) {
@@ -68,6 +65,7 @@ app.get("/api/health", (req, res) => {
     service: "BannerOS",
     version: "1.0.0",
     base_url: BASE_URL,
+    api_base_url: BANNEROS_API_BASE_URL,
   });
 });
 
@@ -122,8 +120,8 @@ if (existsSync(dashboardDist)) {
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`\nBannerOS running on ${BASE_URL}`);
-  console.log(`  API:       ${BASE_URL}/api/health`);
-  console.log(`  MCP:       POST ${BASE_URL}/mcp`);
   console.log(`  Dashboard: ${BASE_URL}/`);
+  console.log(`  API:       ${BASE_URL}/api`);
   console.log(`  Docs:      ${BASE_URL}/docs`);
+  console.log(`  MCP:       ${BASE_URL}/mcp`);
 });

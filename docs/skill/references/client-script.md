@@ -18,7 +18,7 @@ node scripts/banneros-client.js <command> [options-as-json]
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BANNEROS_API_URL` | `http://localhost:3001` | BannerOS API base URL |
+| `BANNEROS_API_BASE_URL` | `http://localhost:3001/api` | BannerOS API base URL |
 | `BANNEROS_TENANT` | `default` | Tenant ID for all operations |
 
 ## Commands

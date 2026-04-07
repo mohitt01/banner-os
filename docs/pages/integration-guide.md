@@ -55,6 +55,18 @@ Content-Type: application/json
 }
 ```
 
+## Environment Setup
+
+Before integrating, set your API base URL:
+
+```bash
+# Local development
+export BANNEROS_API_BASE_URL=http://localhost:3001/api
+
+# Or hosted version
+export BANNEROS_API_BASE_URL=https://your-domain.com/api
+```
+
 ## React Integration
 
 Use a custom hook with `useEffect` + `fetch` to call `POST /api/evaluate` on mount, store banners in state, render conditionally.
@@ -64,7 +76,9 @@ Best for: Single-page React apps, Vite, Create React App.
 ```jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const API_BASE = '/api'; // or process.env.VITE_BANNEROS_API_URL
+// Read from environment variable (Vite: import.meta.env.VITE_BANNEROS_API_BASE_URL)
+// or from your app config
+const API_BASE = import.meta.env.VITE_BANNEROS_API_BASE_URL;
 
 export function useBanners(tenantId, userId, context) {
   const [banners, setBanners] = useState([]);
@@ -127,8 +141,10 @@ Best for: Next.js apps that need SSR banner rendering.
 
 ```tsx
 // app/home/page.tsx — Server Component banner fetch
+const API_BASE = process.env.BANNEROS_API_BASE_URL;
+
 async function getBanners(userId, context) {
-  const res = await fetch('http://localhost:3001/api/evaluate', {
+  const res = await fetch(`${API_BASE}/evaluate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tenant_id: 'default', user_id: userId, context }),

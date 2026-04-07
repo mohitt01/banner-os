@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import * as icons from 'lucide-react';
 import pages from './content';
 import MarkdownPage from './components/MarkdownPage';
-import AIAgentGuide from './pages/AIAgentGuide';
 
 function BannerOSLogo({ className = "w-6 h-6" }) {
   return (
@@ -66,11 +65,7 @@ function App() {
                 <Route
                   key={page.slug}
                   path={page.slug}
-                  element={
-                    page.special
-                      ? <AIAgentGuide markdown={page.body} />
-                      : <MarkdownPage content={page.body} />
-                  }
+                  element={<MarkdownPage content={page.body} />}
                 />
               ))}
             </Routes>
