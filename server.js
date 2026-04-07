@@ -26,14 +26,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || "3001", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const BASE_URL = process.env.BASE_URL || `http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}`;
-
+const BANNEROS_API_BASE_URL = `${BASE_URL}/api`
 // ─── Set BANNEROS_API_BASE_URL for MCP server's api.js (self-referencing in monolith)
-process.env.BANNEROS_API_BASE_URL = `${BASE_URL}/api`;
-
-// ─── Set DATABASE_PATH for API db.js
-if (process.env.DATABASE_PATH) {
-  process.env.BANNEROS_DB_PATH = process.env.DATABASE_PATH;
-}
+process.env.BANNEROS_API_BASE_URL = BANNEROS_API_BASE_URL;
 
 const app = express();
 
