@@ -1,30 +1,19 @@
 # BannerOS Unified Server Dockerfile
-FROM node:18-alpine AS base
+FROM node:24-alpine AS base
 
 # Install dependencies only when needed
-FROM base AS deps
+FROM base AS builder
 WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json ./
-COPY api/package.json ./api/
-COPY dashboard/package.json ./dashboard/
-COPY docs/package.json ./docs/
-COPY mcp-server/package.json ./mcp-server/
+COPY api/package.json api/package-lock.json ./api/
+COPY dashboard/package.json dashboard/package-lock.json ./dashboard/
+COPY docs/package.json docs/package-lock.json ./docs/
+COPY mcp-server/package.json mcp-server/package-lock.json ./mcp-server/
 
 # Install all dependencies
-RUN npm ci
-
-# Build the application
-FROM base AS builder
-WORKDIR /app
-
-# Copy installed dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/api/node_modules ./api/node_modules
-COPY --from=deps /app/dashboard/node_modules ./dashboard/node_modules
-COPY --from=deps /app/docs/node_modules ./docs/node_modules
-COPY --from=deps /app/mcp-server/node_modules ./mcp-server/node_modules
+RUN npm run ci:all
 
 # Copy source code
 COPY . .
@@ -47,6 +36,7 @@ COPY --from=builder /app/mcp-server ./mcp-server
 COPY --from=builder /app/server.js ./server.js
 COPY --from=builder /app/dashboard/dist ./dashboard/dist
 COPY --from=builder /app/docs/dist ./docs/dist
+COPY --from=builder /app/docs/pages ./docs/pages
 COPY --from=builder /app/package.json ./package.json
 
 # Create data directory for SQLite

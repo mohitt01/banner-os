@@ -1,16 +1,9 @@
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
-# Install build dependencies for native modules
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    sqlite-dev
-
 COPY package.json package-lock.json ./
-RUN npm ci --build-from-source
+RUN npm ci
 
 # Copy source code only (exclude node_modules, dist, *.db files)
 COPY src/ ./src/

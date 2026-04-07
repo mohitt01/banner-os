@@ -1,30 +1,82 @@
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
+const fs = require('fs');
 const path = require('path');
 
 class SQLiteAdapter {
   constructor(dbPath) {
     this.dbPath = dbPath;
     this.db = null;
+    this._initPromise = null;
   }
 
-  init() {
+  async init() {
     if (this.db) return;
-    
-    this.db = new Database(this.dbPath);
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('foreign_keys = ON');
-    this.initSchema();
+    if (this._initPromise) return this._initPromise;
+
+    this._initPromise = initSqlJs().then(SQL => {
+      let buffer = null;
+      try {
+        if (fs.existsSync(this.dbPath)) {
+          buffer = fs.readFileSync(this.dbPath);
+        }
+      } catch (e) {
+        // No existing DB file — will create fresh
+      }
+      this.db = buffer ? new SQL.Database(buffer) : new SQL.Database();
+      this.db.run('PRAGMA foreign_keys = ON');
+      this.initSchema();
+      this._initPromise = null;
+    });
+
+    return this._initPromise;
+  }
+
+  // Persist in-memory DB to disk
+  _save() {
+    if (!this.db) return;
+    const dir = path.dirname(this.dbPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const data = this.db.export();
+    fs.writeFileSync(this.dbPath, Buffer.from(data));
+  }
+
+  // Run a query and return all result rows as an array of objects
+  _all(sql, params = []) {
+    const stmt = this.db.prepare(sql);
+    stmt.bind(params);
+    const rows = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rows;
+  }
+
+  // Run a query and return the first row as an object, or null
+  _get(sql, params = []) {
+    const rows = this._all(sql, params);
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  // Execute a statement (INSERT/UPDATE/DELETE) and return metadata
+  _run(sql, params = []) {
+    this.db.run(sql, params);
+    const lastId = this.db.exec("SELECT last_insert_rowid() as id")[0]?.values[0]?.[0] ?? null;
+    const changes = this.db.getRowsModified();
+    this._save();
+    return { lastInsertRowid: lastId, changes };
   }
 
   initSchema() {
-    this.db.exec(`
+    this.db.run(`
       CREATE TABLE IF NOT EXISTS tenants (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         config TEXT NOT NULL DEFAULT '{}',
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-
+      )
+    `);
+    this.db.run(`
       CREATE TABLE IF NOT EXISTS banners (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
@@ -42,8 +94,9 @@ class SQLiteAdapter {
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         FOREIGN KEY (tenant_id) REFERENCES tenants(id)
-      );
-
+      )
+    `);
+    this.db.run(`
       CREATE TABLE IF NOT EXISTS impressions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         banner_id TEXT NOT NULL,
@@ -54,22 +107,21 @@ class SQLiteAdapter {
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         FOREIGN KEY (banner_id) REFERENCES banners(id),
         FOREIGN KEY (tenant_id) REFERENCES tenants(id)
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_banners_tenant ON banners(tenant_id);
-      CREATE INDEX IF NOT EXISTS idx_banners_status ON banners(status);
-      CREATE INDEX IF NOT EXISTS idx_impressions_banner ON impressions(banner_id);
-      CREATE INDEX IF NOT EXISTS idx_impressions_tenant ON impressions(tenant_id);
-      CREATE INDEX IF NOT EXISTS idx_impressions_user ON impressions(user_id);
+      )
     `);
+    this.db.run('CREATE INDEX IF NOT EXISTS idx_banners_tenant ON banners(tenant_id)');
+    this.db.run('CREATE INDEX IF NOT EXISTS idx_banners_status ON banners(status)');
+    this.db.run('CREATE INDEX IF NOT EXISTS idx_impressions_banner ON impressions(banner_id)');
+    this.db.run('CREATE INDEX IF NOT EXISTS idx_impressions_tenant ON impressions(tenant_id)');
+    this.db.run('CREATE INDEX IF NOT EXISTS idx_impressions_user ON impressions(user_id)');
 
     // Seed a default tenant if none exists
-    const count = this.db.prepare('SELECT COUNT(*) as c FROM tenants').get();
+    const count = this._get('SELECT COUNT(*) as c FROM tenants');
     if (count.c === 0) {
-      this.db.prepare(`
+      this._run(`
         INSERT INTO tenants (id, name, config)
-        VALUES ('default', 'Default Tenant', '{"maxBannersPerPage": 3, "defaultDismissDuration": 86400, "allowPromotional": true, "allowSupport": true, "allowInformational": true}')
-      `).run();
+        VALUES (?, ?, ?)
+      `, ['default', 'Default Tenant', '{"maxBannersPerPage": 3, "defaultDismissDuration": 86400, "allowPromotional": true, "allowSupport": true, "allowInformational": true}']);
     }
   }
 
@@ -89,8 +141,8 @@ class SQLiteAdapter {
   }
 
   // Banner operations
-  getBanners(tenantId, filters = {}) {
-    this.init();
+  async getBanners(tenantId, filters = {}) {
+    await this.init();
     
     let sql = 'SELECT * FROM banners WHERE tenant_id = ?';
     const params = [tenantId];
@@ -106,19 +158,19 @@ class SQLiteAdapter {
 
     sql += ' ORDER BY priority DESC, created_at DESC';
 
-    const banners = this.db.prepare(sql).all(...params);
+    const banners = this._all(sql, params);
     return banners.map(b => this.parseRow(b));
   }
 
-  getBanner(id) {
-    this.init();
+  async getBanner(id) {
+    await this.init();
     
-    const banner = this.db.prepare('SELECT * FROM banners WHERE id = ?').get(id);
+    const banner = this._get('SELECT * FROM banners WHERE id = ?', [id]);
     return banner ? this.parseRow(banner) : null;
   }
 
-  createBanner(data) {
-    this.init();
+  async createBanner(data) {
+    await this.init();
     
     const banner = {
       id: data.id || require('uuid').v4(),
@@ -138,22 +190,22 @@ class SQLiteAdapter {
       updated_at: data.updated_at || new Date().toISOString()
     };
 
-    this.db.prepare(`
+    this._run(`
       INSERT INTO banners (id, tenant_id, title, body, type, status, priority, targeting_rules, style, cta_text, cta_url, start_date, end_date, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       banner.id, banner.tenant_id, banner.title, banner.body, banner.type, banner.status,
       banner.priority, banner.targeting_rules, banner.style, banner.cta_text, banner.cta_url,
       banner.start_date, banner.end_date, banner.created_at, banner.updated_at
-    );
+    ]);
 
     return this.parseRow(banner);
   }
 
-  updateBanner(id, updates) {
-    this.init();
+  async updateBanner(id, updates) {
+    await this.init();
     
-    const existing = this.getBanner(id);
+    const existing = await this.getBanner(id);
     if (!existing) return null;
 
     const updated = {
@@ -164,42 +216,42 @@ class SQLiteAdapter {
       updated_at: new Date().toISOString()
     };
 
-    this.db.prepare(`
+    this._run(`
       UPDATE banners SET title=?, body=?, type=?, status=?, priority=?, targeting_rules=?, style=?, cta_text=?, cta_url=?, start_date=?, end_date=?, updated_at=?
       WHERE id=?
-    `).run(
+    `, [
       updated.title, updated.body, updated.type, updated.status, updated.priority,
       updated.targeting_rules, updated.style, updated.cta_text, updated.cta_url,
       updated.start_date, updated.end_date, updated.updated_at, id
-    );
+    ]);
 
     return this.parseRow(updated);
   }
 
-  deleteBanner(id) {
-    this.init();
+  async deleteBanner(id) {
+    await this.init();
     
-    const existing = this.getBanner(id);
+    const existing = await this.getBanner(id);
     if (!existing) return false;
 
-    this.db.prepare('DELETE FROM impressions WHERE banner_id = ?').run(id);
-    this.db.prepare('DELETE FROM banners WHERE id = ?').run(id);
+    this._run('DELETE FROM impressions WHERE banner_id = ?', [id]);
+    this._run('DELETE FROM banners WHERE id = ?', [id]);
     
     return true;
   }
 
   // Tenant operations
-  getTenant(id) {
-    this.init();
+  async getTenant(id) {
+    await this.init();
     
-    const tenant = this.db.prepare('SELECT * FROM tenants WHERE id = ?').get(id);
+    const tenant = this._get('SELECT * FROM tenants WHERE id = ?', [id]);
     return tenant ? this.parseRow(tenant) : null;
   }
 
-  updateTenant(id, updates) {
-    this.init();
+  async updateTenant(id, updates) {
+    await this.init();
     
-    const existing = this.getTenant(id);
+    const existing = await this.getTenant(id);
     if (!existing) return null;
 
     const updated = {
@@ -208,14 +260,14 @@ class SQLiteAdapter {
       config: updates.config !== undefined ? JSON.stringify(updates.config) : existing.config
     };
 
-    this.db.prepare('UPDATE tenants SET name = ?, config = ? WHERE id = ?')
-      .run(updated.name, updated.config, id);
+    this._run('UPDATE tenants SET name = ?, config = ? WHERE id = ?',
+      [updated.name, updated.config, id]);
 
     return this.parseRow(updated);
   }
 
-  createTenant(data) {
-    this.init();
+  async createTenant(data) {
+    await this.init();
     
     const tenant = {
       id: data.id || require('uuid').v4(),
@@ -224,15 +276,15 @@ class SQLiteAdapter {
       created_at: new Date().toISOString()
     };
 
-    this.db.prepare('INSERT INTO tenants (id, name, config) VALUES (?, ?, ?)')
-      .run(tenant.id, tenant.name, tenant.config);
+    this._run('INSERT INTO tenants (id, name, config) VALUES (?, ?, ?)',
+      [tenant.id, tenant.name, tenant.config]);
 
     return this.parseRow(tenant);
   }
 
   // Impression operations
-  createImpression(data) {
-    this.init();
+  async createImpression(data) {
+    await this.init();
     
     const impression = {
       banner_id: data.banner_id,
@@ -243,67 +295,69 @@ class SQLiteAdapter {
       created_at: data.created_at || new Date().toISOString()
     };
 
-    const result = this.db.prepare(`
+    const result = this._run(`
       INSERT INTO impressions (banner_id, tenant_id, user_id, context, action, created_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       impression.banner_id, impression.tenant_id, impression.user_id,
       impression.context, impression.action, impression.created_at
-    );
+    ]);
 
     return { id: result.lastInsertRowid, ...impression };
   }
 
-  getBannerStats(bannerId) {
-    this.init();
+  async getBannerStats(bannerId) {
+    await this.init();
     
-    const views = this.db.prepare("SELECT COUNT(*) as c FROM impressions WHERE banner_id = ? AND action = 'view'").get(bannerId).c;
-    const clicks = this.db.prepare("SELECT COUNT(*) as c FROM impressions WHERE banner_id = ? AND action = 'click'").get(bannerId).c;
-    const dismissals = this.db.prepare("SELECT COUNT(*) as c FROM impressions WHERE banner_id = ? AND action = 'dismiss'").get(bannerId).c;
-    const unique_users = this.db.prepare("SELECT COUNT(DISTINCT user_id) as c FROM impressions WHERE banner_id = ? AND user_id IS NOT NULL").get(bannerId).c;
+    const views = this._get("SELECT COUNT(*) as c FROM impressions WHERE banner_id = ? AND action = 'view'", [bannerId]).c;
+    const clicks = this._get("SELECT COUNT(*) as c FROM impressions WHERE banner_id = ? AND action = 'click'", [bannerId]).c;
+    const dismissals = this._get("SELECT COUNT(*) as c FROM impressions WHERE banner_id = ? AND action = 'dismiss'", [bannerId]).c;
+    const unique_users = this._get("SELECT COUNT(DISTINCT user_id) as c FROM impressions WHERE banner_id = ? AND user_id IS NOT NULL", [bannerId]).c;
 
     // Daily breakdown for last 30 days
-    const daily = this.db.prepare(`
+    const daily = this._all(`
       SELECT date(created_at) as date, action, COUNT(*) as count
       FROM impressions
       WHERE banner_id = ? AND created_at >= datetime('now', '-30 days')
       GROUP BY date(created_at), action
       ORDER BY date(created_at) DESC
-    `).all(bannerId);
+    `, [bannerId]);
 
     return { views, clicks, dismissals, unique_users, daily };
   }
 
-  getTenantStats(tenantId) {
-    this.init();
+  async getTenantStats(tenantId) {
+    await this.init();
     
-    const banners = this.db.prepare('SELECT id, title, type, status FROM banners WHERE tenant_id = ?').all(tenantId);
+    const banners = this._all('SELECT id, title, type, status FROM banners WHERE tenant_id = ?', [tenantId]);
 
-    const stats = banners.map(b => {
-      const bannerStats = this.getBannerStats(b.id);
-      return {
+    const stats = [];
+    for (const b of banners) {
+      const bannerStats = await this.getBannerStats(b.id);
+      stats.push({
         ...b,
         ...bannerStats,
         ctr: bannerStats.views > 0 ? (bannerStats.clicks / bannerStats.views * 100).toFixed(2) + '%' : '0%'
-      };
-    });
+      });
+    }
 
     return stats;
   }
 
-  getDismissedBanners(tenantId, userId) {
-    this.init();
+  async getDismissedBanners(tenantId, userId) {
+    await this.init();
     
-    const dismissed = this.db.prepare(`
+    const dismissed = this._all(`
       SELECT DISTINCT banner_id FROM impressions
       WHERE tenant_id = ? AND user_id = ? AND action = 'dismiss'
-    `).all(tenantId, userId).map(r => r.banner_id);
+    `, [tenantId, userId]).map(r => r.banner_id);
 
     return dismissed;
   }
 
   close() {
     if (this.db) {
+      this._save();
       this.db.close();
       this.db = null;
     }

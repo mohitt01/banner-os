@@ -88,6 +88,7 @@ Before writing any integration code, you MUST ask the user for:
 1. **BannerOS setup** — Ask: "Are you using the hosted BannerOS platform or running it locally?"
    - **Hosted**: `https://your-domain.com/api`
    - **Local**: `http://localhost:3001/api`
+   ...or ask for the correct URL if the above are not applicable
 2. **Tenant ID** — Do not assume. Ask: "What is your BannerOS tenant ID?" Default is `default`.
 3. **Which pages need banners** — Ask: "Which pages should show banners?" (e.g., home, cart, checkout, product, account)
 4. **Framework** — Detect from the codebase if possible. If ambiguous, ask.
@@ -193,35 +194,7 @@ See the examples section below for complete code per framework.
 
 This skill includes a self-contained Node.js CLI at the banneros client section below that lets you call all BannerOS APIs directly. Zero dependencies — requires only Node.js 18+.
 
-Use it to inspect, configure, test, and manage the platform:
-
-```bash
-# Health & validation
-node scripts/banneros-client.js health                    # check API status
-node scripts/banneros-client.js validate                  # validate all banner configs
-
-# Banner management
-node scripts/banneros-client.js list-banners              # see what's configured
-node scripts/banneros-client.js get-banner '{"id":"uuid"}'
-node scripts/banneros-client.js create-banner '{"title":"Test","type":"promotional","priority":100}'
-node scripts/banneros-client.js update-banner '{"id":"uuid","title":"Updated"}'
-node scripts/banneros-client.js delete-banner '{"id":"uuid"}'
-
-# Evaluate & impressions
-node scripts/banneros-client.js evaluate '{"user_id":"u1","context":{"platform":"web","page_path":"/home"}}'
-node scripts/banneros-client.js impression '{"banner_id":"uuid","action":"view","user_id":"u1"}'
-node scripts/banneros-client.js dismiss '{"banner_id":"uuid","user_id":"u1"}'
-
-# Statistics
-node scripts/banneros-client.js tenant-stats              # aggregate stats for all banners
-node scripts/banneros-client.js banner-stats '{"banner_id":"uuid"}'  # detailed stats for one banner
-
-# Configuration & setup
-node scripts/banneros-client.js get-tenant                # view tenant config
-node scripts/banneros-client.js update-tenant '{"config":{"maxBannersPerPage":5}}'
-```
-
-Set `BANNEROS_API_URL` and `BANNEROS_TENANT` environment variables if not using defaults.
+Use it to inspect, configure, test, and manage the platform.
 
 See the client script section below for the full command reference.
 
@@ -232,20 +205,6 @@ See the client script section below for the full command reference.
 - **To validate configurations** — run `validate` to check for missing fields, bad dates, targeting issues, and policy violations
 - **To configure the tenant** — run `update-tenant` to adjust settings like max banners per page
 - **To manage banners** — run `create-banner`, `update-banner`, `delete-banner` to manage banner content directly
-
-## API reference — quick lookup
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/evaluate` | POST | Get banners for a user context |
-| `/api/impressions` | POST | Record view, click, or dismiss |
-| `/api/impressions/dismiss` | POST | Dismiss a banner for a user |
-| `/api/banners` | GET/POST | List or create banners |
-| `/api/banners/:id` | PUT/DELETE | Update or delete a banner |
-| `/api/tenants/:id` | GET/PUT | Get or update tenant config |
-| `/api/impressions/stats` | GET | Aggregate impression stats |
-| `/api/validate` | GET | Validate banner configurations |
-| `/api/health` | GET | Health check |
 
 ## Testing
 
@@ -261,96 +220,6 @@ Minimum tests:
 
 ---
 
-# Decision Rules
-
-Use these rules when making integration decisions. Rules are ordered by priority.
-
-## Universal rules (apply to every page)
-
-1. Never hardcode `tenant_id` or API base URL. Use `BANNEROS_API_BASE_URL` environment variable.
-2. Always include `tenant_id` in every evaluate and impression call.
-3. Always reserve layout space (`min-height`) for banner containers to prevent CLS.
-4. Always emit `view` impression on first render. Deduplicate — never re-fire on re-render.
-5. Always emit `click` impression when user clicks CTA.
-6. All telemetry calls are fire-and-forget. Never `await`. Never block UI.
-7. Wrap all fetch calls in try/catch. A banner error must never break the page.
-8. If API returns empty banners array, collapse the reserved space after 2 seconds.
-9. Include `user_id` in context when available — required for dismiss persistence.
-10. Pass `page_path` in context so targeting rules can match by page.
-
-## Page: home
-
-- Max banners: 3
-- Cache TTL: 5 minutes
-- Stale on error: yes (serve cached for up to 10 minutes)
-- Fallback if API down: show nothing, or static welcome message
-- Fetch strategy: client-side on mount
-- All banner types allowed
-
-## Page: cart
-
-- Max banners: 2
-- Cache TTL: 2 minutes
-- Invalidate cache when cart contents change
-- Stale on error: yes (5 minutes)
-- Fallback if API down: static "Free shipping on orders over $75!" banner
-- Fetch strategy: client-side on mount
-- Prefer promotional banners (upsells, shipping thresholds)
-
-## Page: checkout
-
-- Max banners: 1
-- Cache TTL: 0 — always fetch fresh
-- Stale on error: NO — never show stale banners on checkout
-- Fallback if API down: show nothing — do not interrupt checkout
-- Retry: disabled
-- Fetch strategy: server-side preferred (avoid flicker)
-- Do not use personalized targeting in demo mode
-- Prefer support banners only (maintenance, payment issues)
-
-## Page: product
-
-- Max banners: 2
-- Cache TTL: 5 minutes
-- Stale on error: yes
-- Fetch strategy: client-side on mount
-- Prefer promotional and informational banners
-
-## Page: account
-
-- Max banners: 2
-- Cache TTL: 5 minutes
-- Stale on error: yes
-- Fetch strategy: client-side on mount
-- Prefer informational and support banners
-
-## Placement decisions
-
-When the user asks where to place banners on a page:
-
-- **Top of page** — z-index 10, reserve 70-90px, stack multiple banners vertically with 8px gap
-- **Sidebar** — z-index 1, auto height, single banner only, low-intrusion
-- **Inline** — z-index 1, reserve 60px, single banner between content sections
-- **Mobile** — reduce to max 1-2 banners, full-width, min 44x44px touch targets for dismiss
-
-## Cache invalidation triggers
-
-Invalidate cached banners when:
-- User logs in or out
-- User segment changes
-- Cart contents change (cart page)
-- User navigates to a new page with different `page_path`
-- User explicitly refreshes
-- Dismiss action occurs (remove from local state immediately, do not wait for cache expiry)
-
-## Retry policy
-
-- Default: 2 attempts, 3000ms delay, linear backoff
-- Cart: 1 attempt, 2000ms delay
-- Checkout: no retry
-
----
-
 # Anti-Patterns
 
 Do NOT generate code that does any of the following.
@@ -360,16 +229,6 @@ Do NOT generate code that does any of the following.
 **Bad:**
 ```js
 const res = await fetch('http://localhost:3001/api/evaluate', {
-  body: JSON.stringify({ tenant_id: 'default', ... }),
-});
-```
-
-**Good:**
-```js
-const API_URL = process.env.BANNEROS_API_BASE_URL;
-const res = await fetch(`${API_URL}/evaluate`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ tenant_id: 'default', ... }),
 });
 ```
@@ -527,6 +386,96 @@ context: { platform: 'web', page_path: '/checkout' }
 ```
 
 Why: in demo mode, personalized targeting on checkout creates unpredictable behavior. Keep checkout context minimal.
+
+---
+
+# Decision Rules
+
+Use these rules when making integration decisions. Rules are ordered by priority.
+
+## Universal rules (apply to every page)
+
+1. Never hardcode `tenant_id` or API base URL. Use `BANNEROS_API_BASE_URL` environment variable.
+2. Always include `tenant_id` in every evaluate and impression call.
+3. Always reserve layout space (`min-height`) for banner containers to prevent CLS.
+4. Always emit `view` impression on first render. Deduplicate — never re-fire on re-render.
+5. Always emit `click` impression when user clicks CTA.
+6. All telemetry calls are fire-and-forget. Never `await`. Never block UI.
+7. Wrap all fetch calls in try/catch. A banner error must never break the page.
+8. If API returns empty banners array, collapse the reserved space after 2 seconds.
+9. Include `user_id` in context when available — required for dismiss persistence.
+10. Pass `page_path` in context so targeting rules can match by page.
+
+## Page: home
+
+- Max banners: 3
+- Cache TTL: 5 minutes
+- Stale on error: yes (serve cached for up to 10 minutes)
+- Fallback if API down: show nothing, or static welcome message
+- Fetch strategy: client-side on mount
+- All banner types allowed
+
+## Page: cart
+
+- Max banners: 2
+- Cache TTL: 2 minutes
+- Invalidate cache when cart contents change
+- Stale on error: yes (5 minutes)
+- Fallback if API down: static "Free shipping on orders over $75!" banner
+- Fetch strategy: client-side on mount
+- Prefer promotional banners (upsells, shipping thresholds)
+
+## Page: checkout
+
+- Max banners: 1
+- Cache TTL: 0 — always fetch fresh
+- Stale on error: NO — never show stale banners on checkout
+- Fallback if API down: show nothing — do not interrupt checkout
+- Retry: disabled
+- Fetch strategy: server-side preferred (avoid flicker)
+- Do not use personalized targeting in demo mode
+- Prefer support banners only (maintenance, payment issues)
+
+## Page: product
+
+- Max banners: 2
+- Cache TTL: 5 minutes
+- Stale on error: yes
+- Fetch strategy: client-side on mount
+- Prefer promotional and informational banners
+
+## Page: account
+
+- Max banners: 2
+- Cache TTL: 5 minutes
+- Stale on error: yes
+- Fetch strategy: client-side on mount
+- Prefer informational and support banners
+
+## Placement decisions
+
+When the user asks where to place banners on a page:
+
+- **Top of page** — z-index 10, reserve 70-90px, stack multiple banners vertically with 8px gap
+- **Sidebar** — z-index 1, auto height, single banner only, low-intrusion
+- **Inline** — z-index 1, reserve 60px, single banner between content sections
+- **Mobile** — reduce to max 1-2 banners, full-width, min 44x44px touch targets for dismiss
+
+## Cache invalidation triggers
+
+Invalidate cached banners when:
+- User logs in or out
+- User segment changes
+- Cart contents change (cart page)
+- User navigates to a new page with different `page_path`
+- User explicitly refreshes
+- Dismiss action occurs (remove from local state immediately, do not wait for cache expiry)
+
+## Retry policy
+
+- Default: 2 attempts, 3000ms delay, linear backoff
+- Cart: 1 attempt, 2000ms delay
+- Checkout: no retry
 
 ---
 
@@ -798,7 +747,9 @@ Run through every item before considering the integration complete.
 - [ ] Banners render with type-specific styling (promotional/support/informational)
 - [ ] Checkout page: max 1 banner, no cache, no stale-on-error, no personalization in demo
 
-### 3. Verify banner rendering
+## How to test locally
+
+### 1. Verify banner rendering
 
 Open your app. Banners should appear on the pages you integrated. Check:
 - Do banners appear?
@@ -806,7 +757,7 @@ Open your app. Banners should appear on the pages you integrated. Check:
 - Does the dismiss button work?
 - Does the CTA link work?
 
-### 4. Verify telemetry
+### 2. Verify telemetry
 
 Open browser DevTools > Network tab. Filter by `/api/impressions`. Check:
 - One `view` request per banner on page load
@@ -814,7 +765,7 @@ Open browser DevTools > Network tab. Filter by `/api/impressions`. Check:
 - One `dismiss` request when banner is dismissed
 - No duplicate `view` requests on re-render
 
-### 5. Verify evaluate context
+### 3. Verify evaluate context
 
 Open browser DevTools > Network tab. Filter by `/api/evaluate`. Check the request body:
 - `tenant_id` is present and correct
@@ -856,137 +807,6 @@ Open browser DevTools > Network tab. Filter by `/api/evaluate`. Check the reques
 1. Add artificial delay to the API (or use browser DevTools throttling)
 2. Verify: page loads normally, banner area shows reserved space, banners appear when response arrives
 3. Verify: no layout shift when banners load
-
----
-
-# BannerOS Client Script
-
-A self-contained Node.js CLI that lets you operate BannerOS directly — no MCP required. Requires Node.js 18+ (uses built-in `fetch`). Zero dependencies.
-
-## Location
-
-```
-scripts/banneros-client.js
-```
-
-## Running the script
-
-```bash
-node scripts/banneros-client.js <command> [options-as-json]
-```
-
-## Environment variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BANNEROS_API_BASE_URL` | Required | BannerOS API base URL |
-| `BANNEROS_TENANT` | `default` | Tenant ID for all operations |
-
-## Commands
-
-### Health & validation
-
-```bash
-# Check if the API is running
-node scripts/banneros-client.js health
-
-# Validate all banner configurations
-node scripts/banneros-client.js validate
-```
-
-### Banner management
-
-```bash
-# List all banners
-node scripts/banneros-client.js list-banners
-
-# Filter by status or type
-node scripts/banneros-client.js list-banners '{"status":"active","type":"promotional"}'
-
-# Get a specific banner
-node scripts/banneros-client.js get-banner '{"id":"banner-uuid"}'
-
-# Create a banner
-node scripts/banneros-client.js create-banner '{"title":"Summer Sale","body":"30% off all plans","type":"promotional","priority":100,"targeting_rules":{"platforms":["web"],"countries":["US"]}}'
-
-# Update a banner
-node scripts/banneros-client.js update-banner '{"id":"banner-uuid","title":"Updated Title","priority":150}'
-
-# Delete a banner
-node scripts/banneros-client.js delete-banner '{"id":"banner-uuid"}'
-```
-
-### Evaluate banners for a user
-
-```bash
-# Basic evaluation
-node scripts/banneros-client.js evaluate
-
-# With full user context
-node scripts/banneros-client.js evaluate '{"user_id":"user-123","context":{"platform":"web","page_path":"/home","segment":"free","country":"US","is_authenticated":true}}'
-```
-
-### Impression tracking
-
-```bash
-# Record a view
-node scripts/banneros-client.js impression '{"banner_id":"banner-uuid","action":"view","user_id":"user-123"}'
-
-# Record a click
-node scripts/banneros-client.js impression '{"banner_id":"banner-uuid","action":"click","user_id":"user-123"}'
-
-# Dismiss a banner for a user
-node scripts/banneros-client.js dismiss '{"banner_id":"banner-uuid","user_id":"user-123"}'
-```
-
-### Statistics
-
-```bash
-# Get aggregate stats for all banners in the tenant
-node scripts/banneros-client.js tenant-stats
-
-# Get detailed stats for a specific banner (views, clicks, CTR, daily breakdown)
-node scripts/banneros-client.js banner-stats '{"banner_id":"banner-uuid"}'
-
-# Legacy: get stats (all banners or specific)
-node scripts/banneros-client.js stats
-node scripts/banneros-client.js stats '{"banner_id":"banner-uuid"}'
-```
-
-### Tenant configuration
-
-```bash
-# Get current tenant config
-node scripts/banneros-client.js get-tenant
-
-# Update tenant config
-node scripts/banneros-client.js update-tenant '{"config":{"maxBannersPerPage":5,"allowPromotional":true,"allowSupport":true,"allowInformational":true}}'
-```
-
-## Agent usage
-
-When an agent has this skill installed, it can run the client script directly to:
-
-1. **Check platform health** before writing integration code
-2. **List existing banners** to understand what content is configured
-3. **Create test banners** for development and verification
-4. **Evaluate banners** with specific user contexts to test targeting rules
-5. **View stats** to verify impression tracking is working
-6. **Configure the tenant** to adjust platform settings
-
-The agent does NOT need MCP support to use these capabilities — it just runs the script with `node`.
-
-## Output format
-
-All commands output JSON to stdout. Errors output JSON with an `error` field to stderr with exit code 1.
-
-```json
-// Success
-{ "banners": [...], "count": 3 }
-
-// Error
-{ "error": "Required: banner_id, action (view|click|dismiss)" }
-```
 </code></pre>
 <!-- PROMPT_GUIDE_END -->
 

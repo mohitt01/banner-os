@@ -39,10 +39,10 @@ Before writing any integration code, you MUST ask the user for:
 
 Examples:
 ```bash
-# Hosted version
+# If using hosted BannerOS
 export BANNEROS_API_BASE_URL=https://your-domain.com/api
 
-# Local development
+# If running BannerOS locally
 export BANNEROS_API_BASE_URL=http://localhost:3001/api
 ```
 
@@ -136,35 +136,7 @@ See [references/examples.md](references/examples.md) for complete code per frame
 
 This skill includes a self-contained Node.js CLI at [scripts/banneros-client.js](scripts/banneros-client.js) that lets you call all BannerOS APIs directly. Zero dependencies — requires only Node.js 18+.
 
-Use it to inspect, configure, test, and manage the platform:
-
-```bash
-# Health & validation
-node scripts/banneros-client.js health                    # check API status
-node scripts/banneros-client.js validate                  # validate all banner configs
-
-# Banner management
-node scripts/banneros-client.js list-banners              # see what's configured
-node scripts/banneros-client.js get-banner '{"id":"uuid"}'
-node scripts/banneros-client.js create-banner '{"title":"Test","type":"promotional","priority":100}'
-node scripts/banneros-client.js update-banner '{"id":"uuid","title":"Updated"}'
-node scripts/banneros-client.js delete-banner '{"id":"uuid"}'
-
-# Evaluate & impressions
-node scripts/banneros-client.js evaluate '{"user_id":"u1","context":{"platform":"web","page_path":"/home"}}'
-node scripts/banneros-client.js impression '{"banner_id":"uuid","action":"view","user_id":"u1"}'
-node scripts/banneros-client.js dismiss '{"banner_id":"uuid","user_id":"u1"}'
-
-# Statistics
-node scripts/banneros-client.js tenant-stats              # aggregate stats for all banners
-node scripts/banneros-client.js banner-stats '{"banner_id":"uuid"}'  # detailed stats for one banner
-
-# Configuration & setup
-node scripts/banneros-client.js get-tenant                # view tenant config
-node scripts/banneros-client.js update-tenant '{"config":{"maxBannersPerPage":5}}'
-```
-
-Set `BANNEROS_API_URL` and `BANNEROS_TENANT` environment variables if not using defaults.
+Use it to inspect, configure, test, and manage the platform.
 
 See [references/client-script.md](references/client-script.md) for the full command reference.
 
@@ -175,20 +147,6 @@ See [references/client-script.md](references/client-script.md) for the full comm
 - **To validate configurations** — run `validate` to check for missing fields, bad dates, targeting issues, and policy violations
 - **To configure the tenant** — run `update-tenant` to adjust settings like max banners per page
 - **To manage banners** — run `create-banner`, `update-banner`, `delete-banner` to manage banner content directly
-
-## API reference — quick lookup
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/evaluate` | POST | Get banners for a user context |
-| `/api/impressions` | POST | Record view, click, or dismiss |
-| `/api/impressions/dismiss` | POST | Dismiss a banner for a user |
-| `/api/banners` | GET/POST | List or create banners |
-| `/api/banners/:id` | PUT/DELETE | Update or delete a banner |
-| `/api/tenants/:id` | GET/PUT | Get or update tenant config |
-| `/api/impressions/stats` | GET | Aggregate impression stats |
-| `/api/validate` | GET | Validate banner configurations |
-| `/api/health` | GET | Health check |
 
 ## Testing
 

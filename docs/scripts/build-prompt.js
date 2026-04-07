@@ -146,15 +146,36 @@ function createTarHeader(filename, filesize) {
 
   // ── 2. Build prompt guide ────────────────────────────────────────────────────
 
-  // Skill + references only (no scripts/tools)
-  const SKILL_FILES = [
-    resolve(root, 'skill/SKILL.md'),
-    resolve(root, 'skill/references/decision-rules.md'),
-    resolve(root, 'skill/references/anti-patterns.md'),
-    resolve(root, 'skill/references/examples.md'),
-    resolve(root, 'skill/references/validation-checklist.md'),
-    resolve(root, 'skill/references/client-script.md'),
+  // Auto-discover all markdown files and exclude specific ones
+  const EXCLUDED_FILES = [
+    'client-script.md',  // Exclude client script from AI guide
   ];
+  
+  function getAllMarkdownFiles(skillDir) {
+    const files = [];
+    
+    // Add main SKILL.md
+    const skillMd = resolve(skillDir, 'SKILL.md');
+    if (statSync(skillMd).isFile()) {
+      files.push(skillMd);
+    }
+    
+    // Add all reference files
+    const referencesDir = resolve(skillDir, 'references');
+    if (statSync(referencesDir).isDirectory()) {
+      readdirSync(referencesDir)
+        .filter(file => file.endsWith('.md'))
+        .filter(file => !EXCLUDED_FILES.includes(file))
+        .sort() // Consistent ordering
+        .forEach(file => {
+          files.push(resolve(referencesDir, file));
+        });
+    }
+    
+    return files;
+  }
+  
+  const SKILL_FILES = getAllMarkdownFiles(resolve(root, 'skill'));
 
   function stripFrontmatter(md) {
     return md.replace(/^---[\s\S]*?---\s*/, '');

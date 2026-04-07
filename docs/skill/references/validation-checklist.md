@@ -21,24 +21,7 @@ Run through every item before considering the integration complete.
 
 ## How to test locally
 
-### 1. Start BannerOS
-
-```bash
-cd banner-ops
-npm run dev
-```
-
-This starts the API on `http://localhost:3001`, dashboard on `http://localhost:3000`, docs on `http://localhost:3003`, and demo app on `http://localhost:5000`.
-
-### 2. Seed demo banners
-
-```bash
-cd banner-ops/api && node src/seed.js
-```
-
-Creates 6 demo banners across 3 types with varied targeting rules.
-
-### 3. Verify banner rendering
+### 1. Verify banner rendering
 
 Open your app. Banners should appear on the pages you integrated. Check:
 - Do banners appear?
@@ -46,7 +29,7 @@ Open your app. Banners should appear on the pages you integrated. Check:
 - Does the dismiss button work?
 - Does the CTA link work?
 
-### 4. Verify telemetry
+### 2. Verify telemetry
 
 Open browser DevTools > Network tab. Filter by `/api/impressions`. Check:
 - One `view` request per banner on page load
@@ -54,7 +37,7 @@ Open browser DevTools > Network tab. Filter by `/api/impressions`. Check:
 - One `dismiss` request when banner is dismissed
 - No duplicate `view` requests on re-render
 
-### 5. Verify evaluate context
+### 3. Verify evaluate context
 
 Open browser DevTools > Network tab. Filter by `/api/evaluate`. Check the request body:
 - `tenant_id` is present and correct

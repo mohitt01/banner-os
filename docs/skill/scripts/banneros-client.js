@@ -18,11 +18,11 @@
  *   node banneros-client.js update-tenant '{"config":{"maxBannersPerPage":5}}'
  *
  * Environment:
- *   BANNEROS_API_URL  — API base URL (default: http://localhost:3001)
+ *   BANNEROS_API_BASE_URL  — API base URL (default: http://localhost:3001)
  *   BANNEROS_TENANT   — Tenant ID (default: default)
  */
 
-const API = process.env.BANNEROS_API_URL || 'http://localhost:3001';
+const API = process.env.BANNEROS_API_BASE_URL || 'http://localhost:3001';
 const TENANT = process.env.BANNEROS_TENANT || 'default';
 
 // ─── HTTP helpers ────────────────────────────────────────────────────────────

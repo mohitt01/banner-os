@@ -1,17 +1,16 @@
 const { getDb } = require('./db');
-const { v4: uuidv4 } = require('uuid');
 
-function seed() {
+async function seed() {
   const db = getDb();
 
-  // Clear existing data
-  db.exec('DELETE FROM impressions');
-  db.exec('DELETE FROM banners');
+  // Clear existing banners via delete
+  const existing = await db.getBanners('default');
+  for (const b of existing) {
+    await db.deleteBanner(b.id);
+  }
 
-  const now = new Date().toISOString();
   const futureDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
   const pastDate = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const farFuture = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
 
   const banners = [
     {
@@ -77,35 +76,12 @@ function seed() {
     },
   ];
 
-  const insert = db.prepare(`
-    INSERT INTO banners (id, tenant_id, title, body, type, status, priority, targeting_rules, style, cta_text, cta_url, start_date, end_date, created_at, updated_at)
-    VALUES (?, 'default', ?, ?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?)
-  `);
+  for (const b of banners) {
+    await db.createBanner({ tenant_id: 'default', ...b });
+  }
 
-  const insertMany = db.transaction((items) => {
-    for (const b of items) {
-      insert.run(
-        uuidv4(),
-        b.title,
-        b.body,
-        b.type,
-        b.status,
-        b.priority,
-        JSON.stringify(b.targeting_rules || {}),
-        b.cta_text || null,
-        b.cta_url || null,
-        b.start_date || null,
-        b.end_date || null,
-        now,
-        now,
-      );
-    }
-  });
-
-  insertMany(banners);
-
-  const bannerCount = db.prepare('SELECT COUNT(*) as c FROM banners').get().c;
-  console.log(`Seeded ${bannerCount} banners.`);
+  const all = await db.getBanners('default');
+  console.log(`Seeded ${all.length} banners.`);
 }
 
 seed();
