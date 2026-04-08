@@ -1,3 +1,6 @@
+[![Alwaysdata](https://img.shields.io/badge/Alwaysdata-%23E9568E.svg?style=for-the-badge&logo=alwaysdata&logoColor=white)](https://banner-os.alwaysdata.net/docs)
+[![Render](https://img.shields.io/badge/Render-%46E3B7.svg?style=for-the-badge&logo=render&logoColor=black)](https://banner-os.onrender.com/docs)
+
 # BannerOS
 
 A mini banner management platform with a REST API, dashboard UI, documentation site, MCP server, and demo app.
