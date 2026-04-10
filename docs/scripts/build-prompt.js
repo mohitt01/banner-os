@@ -254,7 +254,7 @@ function createTarHeader(filename, filesize) {
 
   if (startIdx !== -1 && endIdx !== -1) {
   const fence = '`'.repeat(7);
-  const embedded = `\n${fence}txt\n${merged}\n${fence}\n`;
+  const embedded = `\n${fence}md\n${merged}\n${fence}\n`;
   guide = guide.slice(0, startIdx + startMarker.length) + embedded + guide.slice(endIdx);
   writeFileSync(guidePath, guide, 'utf-8');
   console.log(`✓ Embedded prompt guide (${sizeKB}KB) in ai-agent-guide.md`);
