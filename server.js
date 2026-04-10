@@ -4,7 +4,8 @@
  * Single Express process serving:
  *   /api/*      → REST API (banners, evaluate, impressions, tenants, validate, health)
  *   /mcp        → MCP server (StreamableHTTP, POST only)
- *   /docs/*     → Docs site (static Vite build)
+ *   /docs/*     → Docs site (VitePress build)
+ *   /llms.txt   → LLM-friendly docs index (also at /docs/llms.txt)
  *   /*          → Dashboard (static Vite build, SPA fallback)
  *
  * Environment variables:
@@ -82,17 +83,31 @@ try {
 // ═════════════════════════════════════════════════════════════════════════════
 
 const dashboardDist = resolve(__dirname, "dashboard/dist");
-const docsDist = resolve(__dirname, "docs/dist");
+const docsDist = resolve(__dirname, "docs/.vitepress/dist");
 
 if (existsSync(docsDist)) {
+  // Mount llms.txt and llms-full.txt at root for easy discovery
+  for (const f of ["llms.txt", "llms-full.txt"]) {
+    const file = join(docsDist, f);
+    if (existsSync(file)) app.get(`/${f}`, (req, res) => res.sendFile(file));
+  }
+
+  // Serve all static assets under /docs (css, js, images, .md, .txt, .zip, etc.)
   app.use("/docs", express.static(docsDist));
-  // SPA fallback for docs
+
+  // VitePress HTML fallback — only for requests that didn't match a static file
   app.get("/docs/*", (req, res) => {
+    const subpath = req.path.replace(/^\/docs/, "");
+    const htmlFile = join(docsDist, subpath + ".html");
+    const indexFile = join(docsDist, subpath, "index.html");
+    if (existsSync(htmlFile)) return res.sendFile(htmlFile);
+    if (existsSync(indexFile)) return res.sendFile(indexFile);
     res.sendFile(join(docsDist, "index.html"));
   });
   console.log("  ✓ Docs site served at /docs");
+  console.log("  ✓ llms.txt mounted at /llms.txt");
 } else {
-  console.warn("  ⚠ docs/dist not found — run: cd docs && npm run build");
+  console.warn("  ⚠ docs/.vitepress/dist not found — run: cd docs && npm run build");
 }
 
 if (existsSync(dashboardDist)) {

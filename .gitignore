@@ -5,10 +5,6 @@ node_modules/
 dist/
 dist-ssr/
 
-# Generated build artifacts
-docs/public/banneros-skill.zip
-docs/public/prompt-guide.txt
-
 # Database files
 *.db
 *.db-shm

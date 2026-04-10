@@ -15,7 +15,7 @@ import { gzipSync } from 'zlib';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
-const publicDir = resolve(root, 'public');
+const publicDir = resolve(root, 'pages/public');
 mkdirSync(publicDir, { recursive: true });
 
 // ── 1. Build skill ZIP using native Node.js zlib ──────────────────────────────
@@ -29,29 +29,37 @@ async function buildSkillZip() {
     // For a true ZIP, we'd need archiver, but for portability we use gzip
     // Actually, let's create a minimal ZIP manually using zlib
     
+    const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
+    
     const files = [];
     
-    // Add SKILL.md
+    // Add SKILL.md with domain replacement
+    let skillContent = readFileSync(resolve(skillDir, 'SKILL.md'), 'utf-8');
+    skillContent = skillContent.replace(/https:\/\/your-domain\.com/g, baseUrl);
     files.push({
       path: 'SKILL.md',
-      content: readFileSync(resolve(skillDir, 'SKILL.md'), 'utf-8')
+      content: skillContent
     });
     
     // Add references
     const referencesDir = resolve(skillDir, 'references');
     readdirSync(referencesDir).forEach(file => {
+      let content = readFileSync(resolve(referencesDir, file), 'utf-8');
+      content = content.replace(/https:\/\/your-domain\.com/g, baseUrl);
       files.push({
         path: `references/${file}`,
-        content: readFileSync(resolve(referencesDir, file), 'utf-8')
+        content: content
       });
     });
     
     // Add scripts
     const scriptsDir = resolve(skillDir, 'scripts');
     readdirSync(scriptsDir).forEach(file => {
+      let content = readFileSync(resolve(scriptsDir, file), 'utf-8');
+      content = content.replace(/https:\/\/your-domain\.com/g, baseUrl);
       files.push({
         path: `scripts/${file}`,
-        content: readFileSync(resolve(scriptsDir, file), 'utf-8')
+        content: content
       });
     });
     
@@ -144,6 +152,31 @@ function createTarHeader(filename, filesize) {
 (async () => {
   await buildSkillZip();
 
+  // Replace domains in markdown source files before VitePress build
+  const pagesDir = resolve(root, 'pages');
+  const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
+  
+  function processMarkdownFiles(dir) {
+    const files = readdirSync(dir);
+    for (const file of files) {
+      const fullPath = resolve(dir, file);
+      if (statSync(fullPath).isDirectory()) {
+        processMarkdownFiles(fullPath);
+      } else if (file.endsWith('.md')) {
+        let content = readFileSync(fullPath, 'utf-8');
+        const originalContent = content;
+        content = content.replace(/https:\/\/your-domain\.com/g, baseUrl);
+        
+        if (content !== originalContent) {
+          writeFileSync(fullPath, content, 'utf-8');
+          console.log(`Updated domains in ${fullPath.replace(root, '.')}`);
+        }
+      }
+    }
+  }
+  
+  processMarkdownFiles(pagesDir);
+
   // ── 2. Build prompt guide ────────────────────────────────────────────────────
 
   // Auto-discover all markdown files and exclude specific ones
@@ -194,7 +227,12 @@ function createTarHeader(filename, filesize) {
   }
 
   const merged = SKILL_FILES.map((file, i) => {
-    const content = readFileSync(file, 'utf-8');
+    let content = readFileSync(file, 'utf-8');
+    
+    // Replace your-domain.com with actual BASE_URL from environment
+    const baseUrl = process.env.BASE_URL || 'https://your-domain.com';
+    content = content.replace(/https:\/\/your-domain\.com/g, baseUrl);
+    
     if (i === 0) return stripFileLinks(stripFrontmatter(content)).trim();
     return stripFrontmatter(content).trim();
   }).join('\n\n---\n\n');
@@ -215,8 +253,8 @@ function createTarHeader(filename, filesize) {
   const endIdx = guide.indexOf(endMarker);
 
   if (startIdx !== -1 && endIdx !== -1) {
-  // Use <pre><code> for better compatibility with both GitHub and react-markdown
-  const embedded = `\n<pre><code>\n${merged}\n</code></pre>\n`;
+  const fence = '`'.repeat(7);
+  const embedded = `\n${fence}txt\n${merged}\n${fence}\n`;
   guide = guide.slice(0, startIdx + startMarker.length) + embedded + guide.slice(endIdx);
   writeFileSync(guidePath, guide, 'utf-8');
   console.log(`✓ Embedded prompt guide (${sizeKB}KB) in ai-agent-guide.md`);

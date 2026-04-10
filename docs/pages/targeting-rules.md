@@ -1,8 +1,6 @@
 ---
 title: Targeting Rules
-slug: /targeting-rules
-icon: Target
-order: 4
+description: Control which users see each banner by specifying targeting rules.
 ---
 
 # Targeting Rules Reference

@@ -1,8 +1,6 @@
 ---
 title: Getting Started
-slug: /
-icon: Rocket
-order: 1
+description: BannerOS is a banner management platform that lets you create, target, and measure banners across your application.
 ---
 
 # Getting Started with BannerOS
@@ -91,7 +89,7 @@ Supported actions: `view`, `click`, `dismiss`
 
 ## Next Steps
 
-- Learn about [banner types](/banner-types) and when to use each
-- Configure [targeting rules](/targeting-rules) to reach the right users
-- See the full [API reference](/api-reference)
-- Read the [Integration Guide](/integration-guide) for framework-specific examples
+- Learn about [banner types](./banner-types) and when to use each
+- Configure [targeting rules](./targeting-rules) to reach the right users
+- See the full [API reference](./api-reference)
+- Read the [Integration Guide](./integration-guide) for framework-specific examples

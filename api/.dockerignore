@@ -2,3 +2,8 @@ node_modules
 *.db
 *.db-shm
 *.db-wal
+*.local
+.env*
+.DS_Store
+.vscode
+.idea

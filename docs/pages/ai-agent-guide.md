@@ -1,8 +1,6 @@
 ---
 title: AI Agent Guide
-slug: /ai-agent-guide
-icon: Bot
-order: 99
+description: Integrate BannerOS faster by giving your AI coding assistant structured integration guidance.
 ---
 
 # AI Agent Guide
@@ -21,9 +19,16 @@ The docs on this site explain **what** BannerOS is and **how** it works. The AI 
 
 Pick the option that fits your setup.
 
----
+## Option 1: Use llms.txt
 
-## Option 1: Install the Agent Skill
+**For any AI coding agent** - the simplest approach.
+
+Add [`/llms.txt`](../llms.txt) URL into your AI's context:
+The file provides a structured index with direct links to all documentation pages as clean markdown files.
+
+**Alternative:** Use [`llms-full.txt`](../llms-full.txt) for a single-file version with all content concatenated.
+
+## Option 2: Install the Agent Skill
 
 **For IDEs that support [Agent Skills](https://agentskills.io)** (Claude Code, GitHub Copilot, compatible agents).
 
@@ -42,29 +47,12 @@ Extract into one of these locations:
 Your IDE will detect and load the skill automatically. See [agentskills.io/clients](https://agentskills.io/clients) for IDE-specific setup.
 
 <details>
-<summary><strong>What's inside the ZIP?</strong></summary>
+<summary><strong>IDE doesn't support skills?</strong></summary>
 
-- **SKILL.md** — Main skill file the agent reads first
-- **references/decision-rules.md** — Page-specific caching, fallback, and limit rules
-- **references/anti-patterns.md** — Bad/good code examples for common mistakes
-- **references/examples.md** — Full integration code for React, Next.js, Vue 3, Vanilla JS
-- **references/validation-checklist.md** — Pre-PR checklist and testing instructions
-- **references/client-script.md** — Full command reference for the client script
-- **scripts/banneros-client.js** — CLI to operate BannerOS APIs directly (no MCP needed)
-
-</details>
-
----
-
-## Option 2: Copy the Prompt Guide
-
-Copy the full integration guide below and paste it into your AI's context — system prompt, project instructions, or directly in chat.
-
-<details>
-<summary><strong>Full Prompt Guide</strong> (also available as <a href="/docs/prompt-guide.txt" target="_blank">plain text</a>)</summary>
+If your IDE doesn't support Agent Skills, you can still use the **Prompt Guide** below. Copy the full integration guide and paste it into your AI's context - system prompt, project instructions, or directly in chat.
 
 <!-- PROMPT_GUIDE_START -->
-<pre><code>
+```````txt
 # BannerOS Integration Skill
 
 You are integrating BannerOS — a banner management platform — into a client application. BannerOS serves targeted banners (promotions, support notices, informational tips) via a REST API. There is no SDK. You call the API directly.
@@ -807,12 +795,10 @@ Open browser DevTools > Network tab. Filter by `/api/evaluate`. Check the reques
 1. Add artificial delay to the API (or use browser DevTools throttling)
 2. Verify: page loads normally, banner area shows reserved space, banners appear when response arrives
 3. Verify: no layout shift when banners load
-</code></pre>
+```````
 <!-- PROMPT_GUIDE_END -->
 
 </details>
-
----
 
 ## Option 3: Use the MCP Server
 
@@ -878,16 +864,17 @@ Tools marked 🖼 return rich UI responses inline in your IDE if it supports [MC
 
 ## Choosing the right option
 
-| | Skill | Prompt | MCP |
-|--|-------|--------|-----|
+| | llms.txt | Skill | MCP |
+|--|----------|-------|-----|
 | **Integration guidance** | Full | Full | Full |
 | **Decision rules & anti-patterns** | Full | Full | Full |
 | **Framework code examples** | Full | Full | Full |
 | **Validation checklist** | Full | Full | Full |
-| **Live API operations** | via client script | — | Built-in tools |
-| **Rich UI (MCP Apps)** | — | — | 🖼 Built-in |
-| **Supported by** | Most AI coding agents | Any AI | Most AI coding agents |
+| **Live API operations** | — | via client script | Built-in tools |
+| **Rich UI in chat (MCP Apps, 2026)** | — | — | 🖼 Built-in |
+| **Supported by** | Any AI | Leading agents | Leading agents |
+| **Works Offline** | ⚠️ (llms-full.txt) | ✅ | ❌ |
 
+**llms.txt** is the simplest — just paste a URL into any AI.
+**Skill** adds structure and a CLI client script for API operations.
 **MCP** is the most capable — everything from the Skill plus live API tools and rich UI.
-**Skill** is next — full integration guidance plus a CLI client script for API operations.
-**Prompt** is the simplest — paste the guide into any AI for integration guidance only.

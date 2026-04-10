@@ -1,8 +1,6 @@
 ---
 title: Banner Types
-slug: /banner-types
-icon: Layers
-order: 3
+description: BannerOS supports three banner types, each suited for different use cases.
 ---
 
 # Banner Types

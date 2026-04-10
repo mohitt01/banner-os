@@ -18,7 +18,9 @@ RUN npm run ci:all
 # Copy source code
 COPY . .
 
-# Build frontend assets
+# Build frontend assets with dynamic BASE_URL replacement
+ARG BASE_URL=https://your-domain.com
+ENV BASE_URL=$BASE_URL
 RUN npm run build
 
 # Production image
@@ -35,7 +37,7 @@ COPY --from=builder /app/api ./api
 COPY --from=builder /app/mcp-server ./mcp-server
 COPY --from=builder /app/server.js ./server.js
 COPY --from=builder /app/dashboard/dist ./dashboard/dist
-COPY --from=builder /app/docs/dist ./docs/dist
+COPY --from=builder /app/docs/.vitepress/dist ./docs/.vitepress/dist
 COPY --from=builder /app/docs/pages ./docs/pages
 COPY --from=builder /app/package.json ./package.json
 

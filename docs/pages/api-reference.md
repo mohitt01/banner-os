@@ -1,8 +1,6 @@
 ---
 title: API Reference
-slug: /api-reference
-icon: BookOpen
-order: 5
+description: Complete reference for the BannerOS REST API.
 ---
 
 # API Reference

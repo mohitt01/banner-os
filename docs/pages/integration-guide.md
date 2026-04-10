@@ -1,8 +1,6 @@
 ---
 title: Integration Guide
-slug: /integration-guide
-icon: Code2
-order: 2
+description: Integrate BannerOS into your application using direct REST API calls. No SDK required.
 ---
 
 # Integration Guide
