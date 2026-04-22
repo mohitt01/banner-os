@@ -3,7 +3,13 @@
 
 # BannerOS
 
-A mini banner management platform with a REST API, dashboard UI, documentation site, MCP server, and demo app.
+A mini banner management platform with a REST API, dashboard UI, documentation site and MCP server.
+
+## Test Drive
+> If you're here for checkout out the platform context layer with your Agent,
+>   - Click on the badges above (AlwaysData or Render)
+>   - Navigate to 'AI Agent Guide'
+>   - Follow the instructions in the guide
 
 ## Architecture
 
